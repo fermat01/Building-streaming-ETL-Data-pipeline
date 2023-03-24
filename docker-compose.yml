@@ -1,0 +1,106 @@
+version: '3'
+services:
+  kafka:
+    image: wurstmeister/kafka:latest
+    container_name: kafka
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_ADVERTISED_HOST_NAME: kafka
+      KAFKA_CREATE_TOPICS: "streams_topic:1:1"
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+    depends_on:
+      - zookeeper
+
+  zookeeper:
+    image: wurstmeister/zookeeper:latest
+    container_name: zookeeper
+    ports:
+      - "2181:2181"
+  influxdb:
+    image: influxdb:latest
+    container_name: influxdb
+    ports:
+      - "8086:8086"
+    environment:
+      - INFLUXDB_DB=db0-streams
+      - INFLUXDB_USERNAME=${INFLUXDB_USERNAME}
+      - INFLUXDB_PASSWORD=${INFLUXDB_PASSWORD}
+      - INFLUXDB_HTTP_AUTH_ENABLED=true
+      - INFLUXDB_HTTP_FLUX_ENABLED=true
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USERNAME}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
+    depends_on:
+      - influxdb
+
+  postgres:
+    image: postgres:13
+    container_name: postgres13
+    environment:
+      - POSTGRES_USER=airflow01
+      - POSTGRES_PASSWORD=airflow01
+      - POSTGRES_DB=airflowdb
+    ports:
+      - "5434:5432"
+  scheduler:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: on-failure
+    command: scheduler
+    entrypoint: ./scripts/entrypoint.sh
+    depends_on:
+      - postgres
+    env_file:
+      - airflow.env
+    ports:
+      - "8794:8793"
+    volumes:
+      - ./app/dags:/opt/airflow/dags
+      - ./app/logs:/opt/airflow/logs
+      - ./scripts:/opt/airflow/scripts
+    container_name: airflow_scheduler
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "[ -f /usr/local/airflow/airflow-webserver.pid ]"
+        ]
+      interval: 30s
+      timeout: 30s
+      retries: 3
+  webserver:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    hostname: webserver
+    restart: always
+    depends_on:
+      - postgres
+    command: webserver
+    env_file:
+      - airflow.env
+    volumes:
+      - ./app/dags:/opt/airflow/dags
+      - ./app/logs:/opt/airflow/logs
+      - ./scripts:/opt/airflow/scripts
+    ports:
+      - "8088:8080"
+    entrypoint: ./scripts/entrypoint.sh
+    container_name: airflow_webserver
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "[ -f /usr/local/airflow/airflow-webserver.pid ]"
+        ]
+      interval: 30s
+      timeout: 30s
+      retries: 32

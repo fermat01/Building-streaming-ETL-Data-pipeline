@@ -1,0 +1,75 @@
+[2023-03-24T12:57:19.656+0000] {taskinstance.py:1084} INFO - Dependencies all met for dep_context=non-requeueable deps ti=<TaskInstance: data_pipeline.produce_data scheduled__2023-03-04T00:00:00+00:00 [queued]>
+[2023-03-24T12:57:19.796+0000] {taskinstance.py:1084} INFO - Dependencies all met for dep_context=requeueable deps ti=<TaskInstance: data_pipeline.produce_data scheduled__2023-03-04T00:00:00+00:00 [queued]>
+[2023-03-24T12:57:19.814+0000] {taskinstance.py:1282} INFO - 
+--------------------------------------------------------------------------------
+[2023-03-24T12:57:19.818+0000] {taskinstance.py:1283} INFO - Starting attempt 1 of 2
+[2023-03-24T12:57:19.821+0000] {taskinstance.py:1284} INFO - 
+--------------------------------------------------------------------------------
+[2023-03-24T12:57:20.714+0000] {taskinstance.py:1303} INFO - Executing <Task(PythonOperator): produce_data> on 2023-03-04 00:00:00+00:00
+[2023-03-24T12:57:20.752+0000] {standard_task_runner.py:55} INFO - Started process 563 to run task
+[2023-03-24T12:57:20.811+0000] {standard_task_runner.py:82} INFO - Running: ['airflow', 'tasks', 'run', 'data_pipeline', 'produce_data', 'scheduled__2023-03-04T00:00:00+00:00', '--job-id', '3', '--raw', '--subdir', 'DAGS_FOLDER/streaming_data.py', '--cfg-path', '/tmp/tmpq_hjr1qc']
+[2023-03-24T12:57:20.855+0000] {standard_task_runner.py:83} INFO - Job 3: Subtask produce_data
+[2023-03-24T12:57:21.596+0000] {task_command.py:388} INFO - Running <TaskInstance: data_pipeline.produce_data scheduled__2023-03-04T00:00:00+00:00 [running]> on host 87186fafaeef
+[2023-03-24T12:57:22.327+0000] {taskinstance.py:1509} INFO - Exporting the following env vars:
+AIRFLOW_CTX_DAG_OWNER=vianney
+AIRFLOW_CTX_DAG_ID=data_pipeline
+AIRFLOW_CTX_TASK_ID=produce_data
+AIRFLOW_CTX_EXECUTION_DATE=2023-03-04T00:00:00+00:00
+AIRFLOW_CTX_TRY_NUMBER=1
+AIRFLOW_CTX_DAG_RUN_ID=scheduled__2023-03-04T00:00:00+00:00
+[2023-03-24T12:57:22.369+0000] {conn.py:380} INFO - <BrokerConnection node_id=bootstrap-0 host=kafka:9092 <connecting> [IPv4 ('172.20.0.5', 9092)]>: connecting to kafka:9092 [('172.20.0.5', 9092) IPv4]
+[2023-03-24T12:57:22.371+0000] {conn.py:1205} INFO - Probing node bootstrap-0 broker version
+[2023-03-24T12:57:22.389+0000] {conn.py:410} INFO - <BrokerConnection node_id=bootstrap-0 host=kafka:9092 <connecting> [IPv4 ('172.20.0.5', 9092)]>: Connection complete.
+[2023-03-24T12:57:22.580+0000] {conn.py:1267} INFO - Broker version identified as 2.5.0
+[2023-03-24T12:57:22.580+0000] {conn.py:1268} INFO - Set configuration api_version=(2, 5, 0) to skip auto check_version requests on startup
+[2023-03-24T12:57:22.701+0000] {logging_mixin.py:137} INFO - Produced data: {'timestamp': 1679662642, 'temperature': 22.110634811215036, 'humidity': 42.751438178442626, 'pressure': 1009.6269222765026}
+[2023-03-24T12:57:22.707+0000] {conn.py:380} INFO - <BrokerConnection node_id=1001 host=kafka:9092 <connecting> [IPv4 ('172.20.0.5', 9092)]>: connecting to kafka:9092 [('172.20.0.5', 9092) IPv4]
+[2023-03-24T12:57:22.727+0000] {conn.py:410} INFO - <BrokerConnection node_id=1001 host=kafka:9092 <connecting> [IPv4 ('172.20.0.5', 9092)]>: Connection complete.
+[2023-03-24T12:57:22.729+0000] {conn.py:919} INFO - <BrokerConnection node_id=bootstrap-0 host=kafka:9092 <connected> [IPv4 ('172.20.0.5', 9092)]>: Closing connection. 
+[2023-03-24T12:57:52.731+0000] {logging_mixin.py:137} INFO - Produced data: {'timestamp': 1679662672, 'temperature': 27.82723617282106, 'humidity': 32.776918691446376, 'pressure': 1007.7344999024904}
+[2023-03-24T12:58:22.763+0000] {logging_mixin.py:137} INFO - Produced data: {'timestamp': 1679662702, 'temperature': 23.119173151850543, 'humidity': 35.662780179482674, 'pressure': 1003.4894725300549}
+[2023-03-24T12:58:52.793+0000] {logging_mixin.py:137} INFO - Produced data: {'timestamp': 1679662732, 'temperature': 20.086830780246544, 'humidity': 41.7725854140765, 'pressure': 1008.6498301063854}
+[2023-03-24T12:59:22.826+0000] {logging_mixin.py:137} INFO - Produced data: {'timestamp': 1679662762, 'temperature': 22.4078630679381, 'humidity': 33.619032529714346, 'pressure': 1001.271257993421}
+[2023-03-24T12:59:52.857+0000] {logging_mixin.py:137} INFO - Produced data: {'timestamp': 1679662792, 'temperature': 23.09147611058524, 'humidity': 32.93325364905228, 'pressure': 1005.0596560973935}
+[2023-03-24T13:00:22.883+0000] {logging_mixin.py:137} INFO - Produced data: {'timestamp': 1679662822, 'temperature': 21.22587894617731, 'humidity': 40.940699120484865, 'pressure': 1003.0608188684489}
+[2023-03-24T13:00:52.911+0000] {logging_mixin.py:137} INFO - Produced data: {'timestamp': 1679662852, 'temperature': 24.887409412330502, 'humidity': 30.484313345031705, 'pressure': 1006.8953996143405}
+[2023-03-24T13:01:22.939+0000] {logging_mixin.py:137} INFO - Produced data: {'timestamp': 1679662882, 'temperature': 26.90124178982608, 'humidity': 44.322570121068715, 'pressure': 1002.1326597956124}
+[2023-03-24T13:01:52.971+0000] {logging_mixin.py:137} INFO - Produced data: {'timestamp': 1679662912, 'temperature': 20.73358120342597, 'humidity': 47.60098822858764, 'pressure': 1009.0703861151507}
+[2023-03-24T13:02:23.000+0000] {logging_mixin.py:137} INFO - Produced data: {'timestamp': 1679662942, 'temperature': 20.42426979118651, 'humidity': 31.353351275394182, 'pressure': 1001.0557413134233}
+[2023-03-24T13:02:53.029+0000] {logging_mixin.py:137} INFO - Produced data: {'timestamp': 1679662973, 'temperature': 24.942619139565426, 'humidity': 37.544644866901876, 'pressure': 1009.4592192870467}
+[2023-03-24T13:03:23.058+0000] {logging_mixin.py:137} INFO - Produced data: {'timestamp': 1679663003, 'temperature': 28.196001169597267, 'humidity': 33.148419938785864, 'pressure': 1009.7055833971564}
+[2023-03-24T13:03:53.087+0000] {logging_mixin.py:137} INFO - Produced data: {'timestamp': 1679663033, 'temperature': 24.097052525686454, 'humidity': 47.242934440655645, 'pressure': 1001.3676435507879}
+[2023-03-24T13:04:23.119+0000] {logging_mixin.py:137} INFO - Produced data: {'timestamp': 1679663063, 'temperature': 29.83057966930793, 'humidity': 46.60547183581852, 'pressure': 1009.7426334176033}
+[2023-03-24T13:04:53.153+0000] {logging_mixin.py:137} INFO - Produced data: {'timestamp': 1679663093, 'temperature': 21.859136834670895, 'humidity': 41.967268565859115, 'pressure': 1003.3079652157622}
+[2023-03-24T13:05:23.185+0000] {logging_mixin.py:137} INFO - Produced data: {'timestamp': 1679663123, 'temperature': 25.150674956355243, 'humidity': 48.825604810157046, 'pressure': 1002.5504397849645}
+[2023-03-24T13:05:53.213+0000] {logging_mixin.py:137} INFO - Produced data: {'timestamp': 1679663153, 'temperature': 22.039298855963526, 'humidity': 38.083248335298045, 'pressure': 1006.157498834767}
+[2023-03-24T13:06:23.238+0000] {logging_mixin.py:137} INFO - Produced data: {'timestamp': 1679663183, 'temperature': 29.786906211512765, 'humidity': 32.27336975997709, 'pressure': 1009.4356688470228}
+[2023-03-24T13:06:53.267+0000] {logging_mixin.py:137} INFO - Produced data: {'timestamp': 1679663213, 'temperature': 23.00755678918148, 'humidity': 34.30725925558307, 'pressure': 1001.1622216444218}
+[2023-03-24T13:07:23.297+0000] {logging_mixin.py:137} INFO - Produced data: {'timestamp': 1679663243, 'temperature': 20.580748542928813, 'humidity': 30.212811773512676, 'pressure': 1007.8959917751544}
+[2023-03-24T13:07:53.327+0000] {logging_mixin.py:137} INFO - Produced data: {'timestamp': 1679663273, 'temperature': 23.04295690831457, 'humidity': 44.826300291153366, 'pressure': 1005.3789558109961}
+[2023-03-24T13:08:07.000+0000] {conn.py:919} INFO - <BrokerConnection node_id=1001 host=kafka:9092 <connected> [IPv4 ('172.20.0.5', 9092)]>: Closing connection. KafkaConnectionError: Socket EVENT_READ without in-flight-requests
+[2023-03-24T13:08:07.000+0000] {client_async.py:331} WARNING - Node 1001 connection failed -- refreshing metadata
+[2023-03-24T13:08:07.054+0000] {conn.py:380} INFO - <BrokerConnection node_id=1001 host=kafka:9092 <connecting> [IPv4 ('172.20.0.5', 9092)]>: connecting to kafka:9092 [('172.20.0.5', 9092) IPv4]
+[2023-03-24T13:08:07.055+0000] {conn.py:418} ERROR - Connect attempt to <BrokerConnection node_id=1001 host=kafka:9092 <connecting> [IPv4 ('172.20.0.5', 9092)]> returned error 111. Disconnecting.
+[2023-03-24T13:08:07.059+0000] {conn.py:919} INFO - <BrokerConnection node_id=1001 host=kafka:9092 <connecting> [IPv4 ('172.20.0.5', 9092)]>: Closing connection. KafkaConnectionError: 111 ECONNREFUSED
+[2023-03-24T13:08:07.060+0000] {client_async.py:331} WARNING - Node 1001 connection failed -- refreshing metadata
+[2023-03-24T13:08:07.274+0000] {conn.py:380} INFO - <BrokerConnection node_id=1001 host=kafka:9092 <connecting> [IPv4 ('172.20.0.5', 9092)]>: connecting to kafka:9092 [('172.20.0.5', 9092) IPv4]
+[2023-03-24T13:08:07.275+0000] {conn.py:418} ERROR - Connect attempt to <BrokerConnection node_id=1001 host=kafka:9092 <connecting> [IPv4 ('172.20.0.5', 9092)]> returned error 111. Disconnecting.
+[2023-03-24T13:08:07.275+0000] {conn.py:919} INFO - <BrokerConnection node_id=1001 host=kafka:9092 <connecting> [IPv4 ('172.20.0.5', 9092)]>: Closing connection. KafkaConnectionError: 111 ECONNREFUSED
+[2023-03-24T13:08:07.277+0000] {client_async.py:331} WARNING - Node 1001 connection failed -- refreshing metadata
+[2023-03-24T13:08:07.539+0000] {conn.py:380} INFO - <BrokerConnection node_id=1001 host=kafka:9092 <connecting> [IPv4 ('172.20.0.5', 9092)]>: connecting to kafka:9092 [('172.20.0.5', 9092) IPv4]
+[2023-03-24T13:08:07.540+0000] {conn.py:418} ERROR - Connect attempt to <BrokerConnection node_id=1001 host=kafka:9092 <connecting> [IPv4 ('172.20.0.5', 9092)]> returned error 111. Disconnecting.
+[2023-03-24T13:08:07.540+0000] {conn.py:919} INFO - <BrokerConnection node_id=1001 host=kafka:9092 <connecting> [IPv4 ('172.20.0.5', 9092)]>: Closing connection. KafkaConnectionError: 111 ECONNREFUSED
+[2023-03-24T13:08:07.540+0000] {client_async.py:331} WARNING - Node 1001 connection failed -- refreshing metadata
+[2023-03-24T13:08:07.947+0000] {conn.py:380} INFO - <BrokerConnection node_id=1001 host=kafka:9092 <connecting> [IPv4 ('172.20.0.5', 9092)]>: connecting to kafka:9092 [('172.20.0.5', 9092) IPv4]
+[2023-03-24T13:08:07.948+0000] {conn.py:418} ERROR - Connect attempt to <BrokerConnection node_id=1001 host=kafka:9092 <connecting> [IPv4 ('172.20.0.5', 9092)]> returned error 111. Disconnecting.
+[2023-03-24T13:08:07.948+0000] {conn.py:919} INFO - <BrokerConnection node_id=1001 host=kafka:9092 <connecting> [IPv4 ('172.20.0.5', 9092)]>: Closing connection. KafkaConnectionError: 111 ECONNREFUSED
+[2023-03-24T13:08:07.948+0000] {client_async.py:331} WARNING - Node 1001 connection failed -- refreshing metadata
+[2023-03-24T13:08:08.940+0000] {conn.py:380} INFO - <BrokerConnection node_id=1001 host=kafka:9092 <connecting> [IPv4 ('172.20.0.5', 9092)]>: connecting to kafka:9092 [('172.20.0.5', 9092) IPv4]
+[2023-03-24T13:08:08.940+0000] {conn.py:418} ERROR - Connect attempt to <BrokerConnection node_id=1001 host=kafka:9092 <connecting> [IPv4 ('172.20.0.5', 9092)]> returned error 111. Disconnecting.
+[2023-03-24T13:08:08.941+0000] {conn.py:919} INFO - <BrokerConnection node_id=1001 host=kafka:9092 <connecting> [IPv4 ('172.20.0.5', 9092)]>: Closing connection. KafkaConnectionError: 111 ECONNREFUSED
+[2023-03-24T13:08:08.941+0000] {client_async.py:331} WARNING - Node 1001 connection failed -- refreshing metadata
+[2023-03-24T13:08:09.950+0000] {conn.py:380} INFO - <BrokerConnection node_id=1001 host=kafka:9092 <connecting> [IPv4 ('172.20.0.5', 9092)]>: connecting to kafka:9092 [('172.20.0.5', 9092) IPv4]
+[2023-03-24T13:08:09.950+0000] {conn.py:418} ERROR - Connect attempt to <BrokerConnection node_id=1001 host=kafka:9092 <connecting> [IPv4 ('172.20.0.5', 9092)]> returned error 111. Disconnecting.
+[2023-03-24T13:08:09.950+0000] {conn.py:919} INFO - <BrokerConnection node_id=1001 host=kafka:9092 <connecting> [IPv4 ('172.20.0.5', 9092)]>: Closing connection. KafkaConnectionError: 111 ECONNREFUSED
+[2023-03-24T13:08:09.951+0000] {client_async.py:331} WARNING - Node 1001 connection failed -- refreshing metadata
