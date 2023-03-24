@@ -6,4 +6,4 @@
 ![ViewCount](https://views.whatilearened.today/views/github/fermat01/streaming-data-pipeline.svg?cache=remove)
 
 
-Streaming data pepiline with apache airflow,  kafka ,  influxdb and grafana
+Streaming data pepiline using apache airflow, kafka , influxdb and grafana
