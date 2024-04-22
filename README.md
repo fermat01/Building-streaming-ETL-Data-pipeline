@@ -1,4 +1,5 @@
-# streaming-data-pipeline
+# Building-streaming-Data-pipeline
+
 
 ![GitHub](https://img.shields.io/github/license/fermat01/streaming-data-pipeline?style=flat)
 ![GitHub top language](https://img.shields.io/github/languages/top/fermat01/streaming-data-pipeline?style=flat)
@@ -9,7 +10,15 @@
 
 
 
-Streaming data pepiline using apache airflow, kafka , influxdb and grafana
+Building streaming Data pipeline using apache airflow, kafka ,...
+
+
+
+## 1. Architecture
+
+<img src="images/Archit-streaming-data-pipeline.gif" width=1000 height=500> 
+
+ <br />
 
 
 To be continued ...
