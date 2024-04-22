@@ -16,7 +16,7 @@ Building streaming Data pipeline using apache airflow, kafka ,...
 
 ## 1. Architecture
 
-<img src="images/Archit-streaming-data-pipeline.gif" width=1000 height=500> 
+<img src="images/Archit-streaming-data-pipeline.gif" width=1000 height=400> 
 
  <br />
 
