@@ -1,8 +1,4 @@
-
-kafka-python==2.0.2
-pandas==1.5.3
-influxdb==5.3.1
-apache-airflow-providers-influxdb==2.1.0
-airflow-provider-kafka==0.2.2
-psycopg2-binary==2.9.5
-
+confluent-kafka
+requests
+json5
+pyspark
