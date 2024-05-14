@@ -90,8 +90,8 @@ and
 ```
  cd Building-streaming-ETL-Data-pipeline
  ```
-c. Will create dags and logs directories for apache airflow and create a network from terminal
-c.. Create two folders dags and logs for apache airflow:
+
+c. We'ill Create two folders dags and logs for apache airflow:
 
 ```
 mkdir dags/ logs/
