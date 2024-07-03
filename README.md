@@ -29,14 +29,14 @@ In this project, we build a real-time ETL (Extract, Transform, and Load) data pi
 
 - ***Create Kafka Topics*** : Define topics to categorize and organize the incoming data streams based on their sources or types.
 - ***Configure Kafka Producers*** : integrate Kafka producers to send data from open api to the appropriate Kafka topics.
-
-<img src="images/kafka-ui.gif" > 
+- 
+<img src="images/DataInKafka.gif" > 
 
   
 ### Automation and Orchestration
 
 Leverage automation and orchestration tools (e.g., Apache Airflow) to manage and coordinate the various components of the pipeline, enabling efficient deployment, scheduling, and maintenance.
-<img src="images/airflow-ui.gif" > 
+<img src="images/airflow-streaming.png" > 
 
 
 ### Data Processing with Apache Spark
@@ -68,6 +68,8 @@ MinIO is a high-performance, S3 compatible object store. A MinIO "bucket" is equ
 
  - **Docker and docker compose** 
  - **S3 bucket created**: We will use Mini object storage
+ -  Basic understanding of Python and apache spark
+ -  Knowledge of how kafka works: topic, brokers and kafka streaming
 
 
 
@@ -109,11 +111,22 @@ d. From terminal create a network
 docker network create streaming_network
 ```
 
+** Create all services using docker compose by running a code below**
+
+```
+docker compose up -d 
+
+```
+1.  Access airflow UI at http://localhost:8080 using given credentials username: *``` airflow01 ```* and password: *``` airflow01 ```*
+
+<img src="images/airflow-ui.gif" > 
 
 
-1. Access the Kafka UI at http://localhost:8888/ and  create topic naming 'streaming_topic'
+2.  Access the Kafka UI at http://localhost:8888 and  create topic naming 'streaming_topic'
    
-2.  Create Minio docker container
+<img src="images/kafka-ui.gif" > 
+
+3.  Create Minio docker container
 
 ```  
 docker run \
@@ -127,16 +140,21 @@ docker run \
 ```
  and acess minio  UI using ``` http://127.0.0.1:9001 ``` and credentials uername: *``` MINIOAIRFLOW01 ```* and password: *``` AIRFLOW123 ```*
 
+
+ <img src="images/minio-ui.gif" > 
+
 ## 4. Copy your Spark script into the Docker container:
 ```
 docker cp data_processing_spark.py spark_master:/opt/bitnami/spark/
 ```
+ <img src="images/copy-spark-file-to-container.png" > 
 
 *and go inside spark container master node*
 
 ```
-docker exec -it spark_master /bin/bash
+ docker exec -it spark_master /bin/bash
 ```
+ <img src="images/inside-spark-container.png" > 
 
 *and to list all jar files in jars directory*
 
@@ -144,9 +162,9 @@ docker exec -it spark_master /bin/bash
 cd jars
 ```
 
-and list all jar files using 
+and 
 ```
-ls -ll
+ls -l
 ```
 
  **Download required jar files**
