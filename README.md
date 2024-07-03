@@ -111,7 +111,7 @@ d. From terminal create a network
 docker network create streaming_network
 ```
 
-** Create all services using docker compose by running a code below**
+** Create all services using docker compose by using**
 
 ```
 docker compose up -d 
@@ -122,7 +122,7 @@ docker compose up -d
 <img src="images/airflow-ui.gif" > 
 
 
-2.  Access the Kafka UI at http://localhost:8888 and  create topic naming 'streaming_topic'
+2.  Access the Kafka UI at http://localhost:8888 and  create topic naming  *``` streaming_topic```*
    
 <img src="images/kafka-ui.gif" > 
 
@@ -183,7 +183,7 @@ curl -O https://repo1.maven.org/maven2/org/apache/commons/commons-pool2/2.8.0/co
  ```
  cd ..
   ```
-  *and submit your spark application by using code below*
+  *and submit your spark application by using *
 
 ```
    spark-submit \
@@ -210,4 +210,20 @@ To be continued ...
 
 
 
+<!---
 
+spark-submit \\
+--master local[2] \\
+--jars /opt/bitnami/spark/jars/kafka-clients-2.8.1.jar,\\
+/opt/bitnami/spark/jars/spark-sql-kafka-0-10_2.12-3.3.0.jar,\\
+/opt/bitnami/spark/jars/hadoop-aws-3.2.0.jar,\\
+/opt/bitnami/spark/jars/aws-java-sdk-s3-1.11.375.jar,\\
+/opt/bitnami/spark/jars/commons-pool2-2.8.0.jar \\
+data_processing_spark.py
+
+spark-submit \
+  --master local[*] \
+  --jars /opt/bitnami/spark/jars/kafka-clients-2.8.1.jar,/opt/bitnami/spark/jars/spark-sql-kafka-0-10_2.12-3.3.0.jar,/opt/bitnami/spark/jars/hadoop-aws-3.2.0.jar,/opt/bitnami/spark/jars/spark/jars/aws-java-sdk-s3-1.11.375.jar,/opt/bitnami/spark/jars/commons-pool2-2.8.0.jar\
+  test.py
+
+--->
