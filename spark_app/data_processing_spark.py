@@ -5,6 +5,7 @@ from pyspark.sql import SparkSession
 from pyspark.sql.functions import from_json, col
 from pyspark.sql.types import StructType, StructField, StringType, IntegerType, FloatType
 from pyspark import SparkConf, SparkContext
+from pyspark.sql.types import LongType, TimestampType, BinaryType
 
 # Initialize logging
 logging.basicConfig(level=logging.INFO,
@@ -79,17 +80,19 @@ def transform_streaming_data(df):
     """
     schema = StructType([
         StructField("full_name", StringType(), False),
-        StructField("age", StringType(), False),
         StructField("gender", StringType(), False),
-        StructField("location", StringType(), False),
-        StructField("adress", StringType(), False),
+        StructField("age", StringType(), False),
+        StructField("address", StringType(), False),
         StructField("city", StringType(), False),
-        StructField("country", StringType(), False),
-        StructField("phone", StringType(), False),
         StructField("email", StringType(), False),
-        StructField("postcode", IntegerType(), False),
+        StructField("phone", StringType(), False),
+        StructField("nation", StringType(), False),
+        StructField("username", StringType(), False),
+        StructField("registered_date", TimestampType(), False),
+        StructField("zip", LongType(), False),
         StructField("latitude", FloatType(), False),
-        StructField("longitude", FloatType(), False)
+        StructField("longitude", FloatType(), False),
+        StructField("picture", BinaryType(), False)
     ])
 
     transformed_df = df.selectExpr("CAST(value AS STRING)") \
@@ -118,6 +121,7 @@ def initiate_streaming_to_bucket(df, path, checkpoint_location):
 
 
 def main():
+   
     app_name = "SparkStructuredStreamingToMinioS3"
     access_key = "ENTER_YOUR_ACCESS_KEY"
     secret_key = "ENTER_YOUR_SECRET_KEY"
