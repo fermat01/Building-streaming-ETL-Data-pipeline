@@ -122,7 +122,7 @@ docker compose up -d
 <img src="images/airflow-ui.gif" > 
 
 
-2.  Access the Kafka UI at http://localhost:8888 and  create topic naming  *``` streaming_topic```*
+2.  Access the Kafka UI at http://localhost:8888 and  create topic name it   *``` streaming_topic```*
    
 <img src="images/kafka-ui.gif" > 
 
