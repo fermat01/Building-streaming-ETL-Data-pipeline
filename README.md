@@ -183,7 +183,7 @@ curl -O https://repo1.maven.org/maven2/org/apache/commons/commons-pool2/2.8.0/co
  ```
  cd ..
   ```
-  **and submit your spark application by using**
+  **Submit your spark application by using**
 
 ```
    spark-submit \
