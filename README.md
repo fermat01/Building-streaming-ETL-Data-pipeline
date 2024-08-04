@@ -22,6 +22,7 @@ In this project, we build a real-time ETL (Extract, Transform, and Load) data pi
 
 <img src="images/streaming-architect.gif" > 
 
+Our project is composed of several services:
 
 ### Apache kafka 
 
@@ -33,7 +34,7 @@ In this project, we build a real-time ETL (Extract, Transform, and Load) data pi
 <img src="images/DataInKafka.gif" > 
 
   
-### Automation and Orchestration
+### Automation and Orchestration: apache airflow
 
 Leverage automation and orchestration tools (e.g., Apache Airflow) to manage and coordinate the various components of the pipeline, enabling efficient deployment, scheduling, and maintenance.
 <img src="images/airflow-streaming.png" > 
@@ -111,7 +112,7 @@ d. From terminal create a network
 docker network create streaming_network
 ```
 
-** Create all services using docker compose by using**
+**Create all services using docker compose by using**
 
 ```
 docker compose up -d 
@@ -196,6 +197,15 @@ curl -O https://repo1.maven.org/maven2/org/apache/commons/commons-pool2/2.8.0/co
       data_processing_spark.py
 
 ```
+Go back to minio bucket to ensure that data has been uploaded.
+
+
+
+## 5. Conclusion
+
+This project successfully demonstrates the construction of a real-time ETL (Extract, Transform, Load) data pipeline using Apache Kafka for data ingestion, Apache Spark for data processing, and Minio S3 bucket for data storage. By leveraging open APIs, we were able to ingest real-time data, process and transform it efficiently, and load it into a robust storage system for further analysis.
+The use of Apache Kafka provided a scalable and fault-tolerant platform for data ingestion, ensuring that data streams were handled effectively. Apache Spark enabled real-time data processing and transformation, offering powerful capabilities for handling large datasets with low latency. Finally, Amazon S3 served as a reliable and scalable storage solution, allowing for seamless integration with various analytics tools.
+Throughout this project, we highlighted the importance of selecting appropriate tools and technologies to meet the specific requirements of real-time data processing. The integration of these components resulted in a flexible, scalable, and efficient ETL pipeline capable of handling diverse data sources and formats.
 
 
 
@@ -205,25 +215,3 @@ curl -O https://repo1.maven.org/maven2/org/apache/commons/commons-pool2/2.8.0/co
 
 
 
-
-To be continued ...
-
-
-
-<!---
-
-spark-submit \\
---master local[2] \\
---jars /opt/bitnami/spark/jars/kafka-clients-2.8.1.jar,\\
-/opt/bitnami/spark/jars/spark-sql-kafka-0-10_2.12-3.3.0.jar,\\
-/opt/bitnami/spark/jars/hadoop-aws-3.2.0.jar,\\
-/opt/bitnami/spark/jars/aws-java-sdk-s3-1.11.375.jar,\\
-/opt/bitnami/spark/jars/commons-pool2-2.8.0.jar \\
-data_processing_spark.py
-
-spark-submit \
-  --master local[*] \
-  --jars /opt/bitnami/spark/jars/kafka-clients-2.8.1.jar,/opt/bitnami/spark/jars/spark-sql-kafka-0-10_2.12-3.3.0.jar,/opt/bitnami/spark/jars/hadoop-aws-3.2.0.jar,/opt/bitnami/spark/jars/spark/jars/aws-java-sdk-s3-1.11.375.jar,/opt/bitnami/spark/jars/commons-pool2-2.8.0.jar\
-  test.py
-
---->
