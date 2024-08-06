@@ -171,7 +171,7 @@ ls -l
  **Download required jar files**
    
    ```
-curl -O https://repo1.maven.org/maven2/org/apache/kafka/kafka-clients/2.8.1/kafka-clients-2.8.1.jar
+curl -O https://repo1.maven.org/maven2/org/apache/kafka/kafka-clients/3.3.0/kafka-clients-3.3.0.jar
 curl -O https://repo1.maven.org/maven2/org/apache/spark/spark-sql-kafka-0-10_2.12/3.3.0/spark-sql-kafka-0-10_2.12-3.3.0.jar
 curl -O https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-aws/3.2.0/hadoop-aws-3.2.0.jar
 curl -O https://repo1.maven.org/maven2/com/amazonaws/aws-java-sdk-s3/1.11.375/aws-java-sdk-s3-1.11.375.jar
@@ -187,15 +187,13 @@ curl -O https://repo1.maven.org/maven2/org/apache/commons/commons-pool2/2.8.0/co
   **Submit your spark application by using**
 
 ```
-   spark-submit \
-      --master local[2] \
-      --jars /opt/bitnami/spark/jars/kafka-clients-2.8.1.jar,\
-      /opt/bitnami/spark/jars/spark-sql-kafka-0-10_2.12-3.3.0.jar,\
-      /opt/bitnami/spark/jars/hadoop-aws-3.2.0.jar,\
-      /opt/bitnami/spark/jars/aws-java-sdk-s3-1.11.375.jar,\
-      /opt/bitnami/spark/jars/commons-pool2-2.8.0.jar \
-      data_processing_spark.py
-
+  /opt/bitnami/spark/bin/spark-submit \
+--master local[2] \
+--packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.3.0,org.apache.kafka:kafka-clients:3.3.0 \
+--jars /opt/bitnami/spark/jars/hadoop-aws-3.2.0.jar,\
+/opt/bitnami/spark/jars/aws-java-sdk-s3-1.11.375.jar,\
+/opt/bitnami/spark/jars/commons-pool2-2.8.0.jar \
+data_processing_spark.py
 ```
 Go back to minio bucket to ensure that data has been uploaded.
 
