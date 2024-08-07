@@ -38,6 +38,8 @@ Our project is composed of several services:
 ### Automation and Orchestration: apache airflow
 
 Leverage automation and orchestration tools (e.g., Apache Airflow) to manage and coordinate the various components of the pipeline, enabling efficient deployment, scheduling, and maintenance.
+
+<br><br>
 <img src="images/airflow-streaming.png" > 
 
 
@@ -183,7 +185,7 @@ Copy your Spark script into the Docker container:
 
  <img src="images/inside-spark-container.png" > 
 
- and To list all jar files in jars folder and download the required jar files for spark application
+ and to list all jar files in jars folder and download the required jar files for spark application
 </li>
 
 
