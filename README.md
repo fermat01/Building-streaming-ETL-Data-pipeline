@@ -19,7 +19,7 @@ Building streaming Data pipeline using apache airflow,  kafka, spark and contain
 
 In this project, we build a real-time ETL (Extract, Transform, and Load) data pipeline.  During this process we will use open api to get data Building a streaming ETL (Extract, Transform, Load) data pipeline involves ingesting real-time data , process and transform , and load it into a data storage or analytics system. This overview outlines the process of building such a pipeline requiring Apache Kafka for data ingestion, Apache Spark for data processing, and Amazon S3 for data storage. 
 
-
+<br>
 <img src="images/streaming-architect.gif" > 
 
 Our project is composed of several services:
@@ -116,6 +116,9 @@ chmod -R 777 logs/
 docker compose up -d 
 
 ```
+
+<br>
+
 <img src="images/all_services.png" > 
 
 
@@ -165,6 +168,8 @@ Copy your Spark script into the Docker container:
 <code>docker cp data_processing_spark.py spark_master:/opt/bitnami/spark/</code>
 
 
+<br>
+
  <img src="images/copy-spark-file-to-container.png" > 
 </li>
 
@@ -173,6 +178,9 @@ Copy your Spark script into the Docker container:
 ```
  docker exec -it spark_master /bin/bash
 ```
+
+<br>
+
  <img src="images/inside-spark-container.png" > 
 
  and To list all jar files in jars folder and download the required jar files for spark application
