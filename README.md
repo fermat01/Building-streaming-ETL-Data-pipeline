@@ -161,7 +161,7 @@ Before submitting spark applcation, it is important to understant how spark comm
 Make sure to verify the broker ports and hostnames.
 Required jar files must be downloaded.
 <ol>
-  <li> Change the Minio right $\color{orange}{API URL}$ after checking minio docker container with yours.
+  <li> Change the Minio right $\color{orange}{API-URL}$ after checking minio docker container with yours.
   <br><br>
     <img src="images/spark_session.png" > 
 </li>
