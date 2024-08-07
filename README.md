@@ -130,7 +130,7 @@ docker compose up -d
 
 <ol>
 <li>
-Access airflow UI at <a href="http://localhost:8080 ">http://localhost:8080</a> using given credentials username: $\color{orange}{airflow01}$  and password: $\color{orange}{airflow01}$ 
+Access airflow UI at <a href="http://localhost:8080 ">http://localhost:8080</a> using given credentials username: $\color{yellow}{airflow01}$  and password: $\color{orange}{airflow01}$ 
 
 
 
