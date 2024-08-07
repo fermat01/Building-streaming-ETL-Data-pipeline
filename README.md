@@ -19,7 +19,7 @@ Building streaming Data pipeline using apache airflow,  kafka, spark and contain
 
 In this project, we build a real-time ETL (Extract, Transform, and Load) data pipeline.  During this process we will use open api to get data Building a streaming ETL (Extract, Transform, Load) data pipeline involves ingesting real-time data , process and transform , and load it into a data storage or analytics system. This overview outlines the process of building such a pipeline requiring Apache Kafka for data ingestion, Apache Spark for data processing, and Amazon S3 for data storage. 
 
-<br>
+<br><br>
 <img src="images/streaming-architect.gif" > 
 
 Our project is composed of several services:
@@ -31,7 +31,8 @@ Our project is composed of several services:
 - ***Create Kafka Topics*** : Define topics to categorize and organize the incoming data streams based on their sources or types.
 - ***Configure Kafka Producers*** : integrate Kafka producers to send data from open api to the appropriate Kafka topic.
 
-<br>
+
+<br><br>
 <img src="images/DataInKafka.gif" > 
 
   
@@ -63,7 +64,7 @@ MinIO is a high-performance, S3 compatible object store. A MinIO "bucket" is equ
 
 
 
- <br />
+<br><br>
 
 
 ## 2. Getting Started
@@ -119,7 +120,8 @@ docker compose up -d
 
 ```
 
-<br>
+
+<br><br>
 
 <img src="images/all_services.png" > 
 
@@ -131,23 +133,25 @@ docker compose up -d
 Access airflow UI at <a href="http://localhost:8080 ">http://localhost:8080</a> using given credentials username: <span style="color:orange;"> airflow01</span> and password: <span style="color:orange;">airflow01</span>
 
 
-<br>
+
+<br><br>
 <img src="images/airflow-ui.gif" > 
 <li/>
 </l>
 Access the Kafka UI at <a href="http://localhost:8888 ">http://localhost:8888</a> and  create topic name it <span style="color:orange;">streaming-topic</span> with number of partitions: <span style="color:orange;">6</span>
 
-<br>
 
+<br><br>
 <img src="images/kafka-ui.gif" > 
 </li>
 
 
 <li>
- acess Minio  UI using <a href="http://127.0.0.1:9001">http://127.0.0.1:9001</a> and with  credentials uername: <span style="color:orange;"> MINIOAIRFLOW01 </span>  and password:<span style="color:orange;"> AIRFLOW123 </span> 
+ acess Minio  UI using <a href="http://127.0.0.1:9001">http://127.0.0.1:9001</a> and with  credentials uername: $\color{orange}{MINIOAIRFLOW01}$ and password:  $\color{orange}{ AIRFLOW123 }$ 
 </li>
 
-<br>
+
+<br><br>
  <img src="images/minio-ui.gif" > 
 
 </ol> 
@@ -170,7 +174,8 @@ Copy your Spark script into the Docker container:
 <code>docker cp data_processing_spark.py spark_master:/opt/bitnami/spark/</code>
 
 
-<br>
+
+<br><br>
 
  <img src="images/copy-spark-file-to-container.png" > 
 </li>
@@ -181,7 +186,7 @@ Copy your Spark script into the Docker container:
  docker exec -it spark_master /bin/bash
 ```
 
-<br>
+<br><br>
 
  <img src="images/inside-spark-container.png" > 
 
@@ -233,8 +238,8 @@ data_processing_spark.py
 Go back to minio bucket to ensure that data has been uploaded.</li>
 And voilà, it worked !!!
 
-<br>
 
+<br><br>
  <img src="images/parquet_data_bucket.png" > 
 
 <ol>
