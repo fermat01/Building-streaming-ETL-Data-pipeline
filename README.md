@@ -52,7 +52,7 @@ Apache Spark is a powerful open-source distributed processing framework that exc
 - ***Define Transformations*** : Implement the necessary transformations and computations on the incoming data streams using Spark's powerful APIs. This may include data cleaning, filtering, aggregations, and enrichment from other data sources.
 - ***Integrate with Amazon S3*** : Configure Spark to write the processed data to Minio S3 object storage in a suitable format (e.g., Parquet, Avro, or CSV) for efficient storage and querying.
 
-### Data Storage in Minio S3
+### D.  Data Storage in Minio S3
 MinIO is a high-performance, S3 compatible object store. A MinIO "bucket" is equivalent to an S3 bucket, which is a fundamental container used to store objects (files) in object storage. In this pipeline, S3 will serve as the final destination for storing the processed data streams.
 
 - ***Create S3 Bucket*** : Set up an Minio S3 bucket to store the processed data in real-time.
