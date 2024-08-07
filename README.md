@@ -24,7 +24,7 @@ In this project, we build a real-time ETL (Extract, Transform, and Load) data pi
 
 Our project is composed of several services:
 
-### Apache kafka 
+### A. Apache kafka 
 
 - ***Set up Kafka Cluster***: Deploy a Kafka cluster with multiple brokers for high availability and scalability.
 
@@ -36,7 +36,7 @@ Our project is composed of several services:
 <img src="images/DataInKafka.gif" > 
 
   
-### Automation and Orchestration: apache airflow
+### B. Automation and Orchestration: apache airflow
 
 Leverage automation and orchestration tools (e.g., Apache Airflow) to manage and coordinate the various components of the pipeline, enabling efficient deployment, scheduling, and maintenance.
 
@@ -44,7 +44,7 @@ Leverage automation and orchestration tools (e.g., Apache Airflow) to manage and
 <img src="images/airflow-streaming.png" > 
 
 
-### Data Processing with Apache Spark
+### C. Data Processing with Apache Spark
 
 Apache Spark is a powerful open-source distributed processing framework that excels at processing large-scale data streams. In this pipeline, Spark will consume data from Kafka topics, perform transformations and computations, and prepare the data for storage in Amazon S3.
 
