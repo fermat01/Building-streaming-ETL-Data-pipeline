@@ -129,13 +129,13 @@ docker compose up -d
 Access airflow UI at <a href="http://localhost:8080 ">http://localhost:8080</a> using given credentials username: <span style="color:orange;"> airflow01</span> and password: <span style="color:orange;">airflow01</span>
 
 
-<br/>
+<br>
 <img src="images/airflow-ui.gif" > 
 <li/>
 </l>
 Access the Kafka UI at <a href="http://localhost:8888 ">http://localhost:8888</a> and  create topic name it <span style="color:orange;">streaming-topic</span> with number of partitions: <span style="color:orange;">6</span>
 
-<br/>
+<br>
 
 <img src="images/kafka-ui.gif" > 
 </li>
