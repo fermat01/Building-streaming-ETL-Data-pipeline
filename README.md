@@ -161,7 +161,12 @@ Before submitting spark applcation, it is important to understant how spark comm
 Make sure to verify the broker ports and hostnames.
 Required jar files must be downloaded.
 <ol>
-<li>
+  <li> Change the Minio right $\color{orange}{API URL}$ after checking minio docker container with yours.
+  <br><br>
+    <img src="images/spark_session.png" > 
+</li>
+   <br><br>
+  <li>
 spark version can be verified using :<code>/opt/bitnami/spark/bin/spark-submit --version</code>
 </li>
 <li>and kafka version using the log of one of broker containers: <code>docker logs broker-1 | grep -i "kafka.*version" </code>
