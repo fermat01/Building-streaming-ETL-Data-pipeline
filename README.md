@@ -10,7 +10,7 @@
 
 
 
-Building streaming Data pipeline using apache airflow, kafka ,...
+Building streaming Data pipeline using apache airflow,  kafka, spark and container based object storage ( Minio S3 Bucket)
 
 
 
@@ -29,8 +29,11 @@ Our project is composed of several services:
 - ***Set up Kafka Cluster***: Deploy a Kafka cluster with multiple brokers for high availability and scalability.
 
 - ***Create Kafka Topics*** : Define topics to categorize and organize the incoming data streams based on their sources or types.
-- ***Configure Kafka Producers*** : integrate Kafka producers to send data from open api to the appropriate Kafka topics.
-- 
+
+- ***Configure Kafka Producers*** : integrate Kafka producers to send data from open api to the appropriate Kafka topic.
+
+<br>
+
 <img src="images/DataInKafka.gif" > 
 
   
@@ -44,19 +47,19 @@ Leverage automation and orchestration tools (e.g., Apache Airflow) to manage and
 
 Apache Spark is a powerful open-source distributed processing framework that excels at processing large-scale data streams. In this pipeline, Spark will consume data from Kafka topics, perform transformations and computations, and prepare the data for storage in Amazon S3.
 
-- ***Configure Spark Streaming*** : Set up a Spark Streaming application to consume data from Kafka topics in real-time.
+- ***Configure Spark Streaming*** : Set up a Spark Streaming application to consume data from Kafka topic in real-time.
 - ***Define Transformations*** : Implement the necessary transformations and computations on the incoming data streams using Spark's powerful APIs. This may include data cleaning, filtering, aggregations, and enrichment from other data sources.
-- ***Integrate with Amazon S3*** : Configure Spark to write the processed data to Amazon S3 in a suitable format (e.g., Parquet, Avro, or CSV) for efficient storage and querying.
+- ***Integrate with Amazon S3*** : Configure Spark to write the processed data to Minio S3 object storage in a suitable format (e.g., Parquet, Avro, or CSV) for efficient storage and querying.
+
 
 ### Data Storage in Minio S3
 MinIO is a high-performance, S3 compatible object store. A MinIO "bucket" is equivalent to an S3 bucket, which is a fundamental container used to store objects (files) in object storage. In this pipeline, S3 will serve as the final destination for storing the processed data streams.
 
-- ***Create S3 Bucket*** : Set up an S3 bucket to store the processed data streams.
+
+- ***Create S3 Bucket*** : Set up an Minio S3 bucket to store the processed data in real-time.
 - ***Define Data Organization***: Determine the appropriate folder structure and naming conventions for organizing the data in the S3 bucket based on factors such as time, source, or data type.
 
-- ***Configure Access and Permissions*** : Set up appropriate access controls and permissions for the S3 bucket to ensure data security and compliance with organizational policies.
-
-
+- ***Configure Access and Permissions*** : Create  appropriate access key, secret key  and permissions for the Minio object storage  to ensure data security and compliance with organizational policies.
 
 
 
@@ -67,21 +70,22 @@ MinIO is a high-performance, S3 compatible object store. A MinIO "bucket" is equ
 
 **Prerequisites**
 
- - **Docker and docker compose** 
+
+ - Understanding of **Docker, docker compose** and **network**
  - **S3 bucket created**: We will use Mini object storage
- -  Basic understanding of Python and apache spark
- -  Knowledge of how kafka works: topic, brokers and kafka streaming
-
-
+ -  Basic understanding of Python and apache spark structured streaming
+ -  Knowledge of how kafka works: topic, brokers, partitions and kafka streaming
+ -   Basic undestanding of distributed systems
 
 
 
 ## 3. Setting up project environment:
 
-a. Make sure docker is running: from terminal ``` docker --version```
+-  Make sure docker is running: from terminal ``` docker --version```
 
 
-b. Clone the repository and navigate to the project directory
+- Clone the repository and navigate to the project directory
+
 
 
 ```
@@ -102,6 +106,7 @@ mkdir dags/ logs/
 and give them permission
 
 
+
 ```
 chmod -R 777 dags/
 chmod -R 777 logs/
@@ -109,8 +114,15 @@ chmod -R 777 logs/
 
 d. From terminal create a network
 ```
-docker network create streaming_network
+ git clone https://github.com/fermat01/Building-streaming-ETL-Data-pipeline.git
+ ```
+and 
+
+
 ```
+ cd Building-streaming-ETL-Data-pipeline
+ ```
+We'll create dags and logs directories for apache airflow from terminal
 
 **Create all services using docker compose by using**
 
@@ -122,7 +134,21 @@ docker compose up -d
 
 <img src="images/airflow-ui.gif" > 
 
+```
+mkdir dags/ logs/
+```
+and give them permission
 
+
+```
+chmod -R 777 dags/
+chmod -R 777 logs/
+```
+
+
+**Create all services using docker compose**
+
+=======
 2.  Access the Kafka UI at http://localhost:8888 and  create topic name it   *``` streaming_topic```*
    
 <img src="images/kafka-ui.gif" > 
@@ -145,19 +171,73 @@ docker run \
  <img src="images/minio-ui.gif" > 
 
 ## 4. Copy your Spark script into the Docker container:
-```
-docker cp data_processing_spark.py spark_master:/opt/bitnami/spark/
-```
- <img src="images/copy-spark-file-to-container.png" > 
 
-*and go inside spark container master node*
+```
+docker compose up -d 
+
+
+<img src="images/all_services.png" > 
+
+
+## 4. Access the services:
+
+<ol>
+<li>
+Access airflow UI at <a href="http://localhost:8080 ">http://localhost:8080</a> using given credentials username: <span style="color:orange;"> airflow01</span> and password: <span style="color:orange;">airflow01</span>
+
+
+<br/>
+<img src="images/airflow-ui.gif" > 
+<li/>
+</l>
+Access the Kafka UI at <a href="http://localhost:8888 ">http://localhost:8888</a> and  create topic name it <span style="color:orange;">streaming-topic</span> with number of partitions: <span style="color:orange;">6</span>
+
+<br/>
+
+<img src="images/kafka-ui.gif" > 
+</li>
+
+
+<li>
+ acess Minio  UI using <a href="http://127.0.0.1:9001">http://127.0.0.1:9001</a> and with  credentials uername: <span style="color:orange;"> MINIOAIRFLOW01 </span>  and password:<span style="color:orange;"> AIRFLOW123 </span> 
+</li>
+
+<br>
+ <img src="images/minio-ui.gif" > 
+
+</ol> 
+
+## 4. Spark application
+Before submitting spark applcation, it is important to understant how spark communicate with apache kafka and Minio container based object storage when using docker. here we need to check minio container log to get right API url for spark application.
+Make sure to verify the broker ports and hostnames.
+Required jar files must be downloaded.
+<ol>
+<li>
+spark version can be verified using :<code>/opt/bitnami/spark/bin/spark-submit --version</code>
+</li>
+<li>and kafka version using the log of one of broker containers: <code>docker logs broker-1 | grep -i "kafka.*version" </code>
+
+</li>
+
+<li>
+Copy your Spark script into the Docker container:
+
+<code>docker cp data_processing_spark.py spark_master:/opt/bitnami/spark/</code>
+
+
+ <img src="images/copy-spark-file-to-container.png" > 
+</li>
+
+<li> and go inside spark container master node</li>
 
 ```
  docker exec -it spark_master /bin/bash
 ```
  <img src="images/inside-spark-container.png" > 
 
-*and to list all jar files in jars directory*
+ and To list all jar files in jars folder and download the required jar files for spark application
+</li>
+
 
 ```
 cd jars
@@ -171,15 +251,20 @@ ls -l
  **Download required jar files**
    
    ```
+
 curl -O https://repo1.maven.org/maven2/org/apache/kafka/kafka-clients/3.3.0/kafka-clients-3.3.0.jar
 curl -O https://repo1.maven.org/maven2/org/apache/spark/spark-sql-kafka-0-10_2.12/3.3.0/spark-sql-kafka-0-10_2.12-3.3.0.jar
 curl -O https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-aws/3.2.0/hadoop-aws-3.2.0.jar
 curl -O https://repo1.maven.org/maven2/com/amazonaws/aws-java-sdk-s3/1.11.375/aws-java-sdk-s3-1.11.375.jar
-curl -O https://repo1.maven.org/maven2/org/apache/commons/commons-pool2/2.8.0/commons-pool2-2.8.0.jar
-
+curl -O https://repo1.maven.org/maven2/org/apache/commons/commons-pool2/2.11.0/commons-pool2-2.11.0.jar
+curl -O https://repo1.maven.org/maven2/org/apache/spark/spark-streaming_2.12/3.3.0/spark-streaming_2.12-3.3.0.jar
+curl -O https://packages.confluent.io/maven/org/apache/kafka/kafka-clients/7.7.0-ce/kafka-clients-7.7.0-ce.jar
+curl -O https://repo1.maven.org/maven2/org/apache/spark/spark-sql-kafka-0-10_2.12/3.3.0/spark-sql-kafka-0-10_2.12-3.3.0.jar
+curl -O https://repo1.maven.org/maven2/org/apache/spark/spark-token-provider-kafka-0-10_2.12/3.3.0/spark-token-provider-kafka-0-10_2.12-3.3.0.jar
    ```
 
 *Go back using*
+
 
  ```
  cd ..
@@ -187,15 +272,28 @@ curl -O https://repo1.maven.org/maven2/org/apache/commons/commons-pool2/2.8.0/co
   **Submit your spark application by using**
 
 ```
-  /opt/bitnami/spark/bin/spark-submit \
+ /opt/bitnami/spark/bin/spark-submit \
 --master local[2] \
---packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.3.0,org.apache.kafka:kafka-clients:3.3.0 \
 --jars /opt/bitnami/spark/jars/hadoop-aws-3.2.0.jar,\
 /opt/bitnami/spark/jars/aws-java-sdk-s3-1.11.375.jar,\
-/opt/bitnami/spark/jars/commons-pool2-2.8.0.jar \
+/opt/bitnami/spark/jars/commons-pool2-2.11.0.jar,\
+/opt/bitnami/spark/jars/spark-streaming_2.12-3.3.0.jar,\
+/opt/bitnami/spark/jars/kafka-clients-7.7.0-ce.jar,\
+/opt/bitnami/spark/jars/spark-sql-kafka-0-10_2.12-3.3.0.jar,\
+/opt/bitnami/spark/jars/spark-token-provider-kafka-0-10_2.12-3.3.0.jar \
 data_processing_spark.py
 ```
-Go back to minio bucket to ensure that data has been uploaded.
+<li>
+Go back to minio bucket to ensure that data has been uploaded.</li>
+And voilà, it worked !!!
+
+<br>
+
+ <img src="images/parquet_data_bucket.png" > 
+
+<ol>
+
+ 
 
 
 
