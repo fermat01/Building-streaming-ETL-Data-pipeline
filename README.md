@@ -29,9 +29,11 @@ Our project is composed of several services:
 - ***Set up Kafka Cluster***: Deploy a Kafka cluster with multiple brokers for high availability and scalability.
 
 - ***Create Kafka Topics*** : Define topics to categorize and organize the incoming data streams based on their sources or types.
+
 - ***Configure Kafka Producers*** : integrate Kafka producers to send data from open api to the appropriate Kafka topic.
 
 <br>
+
 <img src="images/DataInKafka.gif" > 
 
   
@@ -49,15 +51,15 @@ Apache Spark is a powerful open-source distributed processing framework that exc
 - ***Define Transformations*** : Implement the necessary transformations and computations on the incoming data streams using Spark's powerful APIs. This may include data cleaning, filtering, aggregations, and enrichment from other data sources.
 - ***Integrate with Amazon S3*** : Configure Spark to write the processed data to Minio S3 object storage in a suitable format (e.g., Parquet, Avro, or CSV) for efficient storage and querying.
 
+
 ### Data Storage in Minio S3
 MinIO is a high-performance, S3 compatible object store. A MinIO "bucket" is equivalent to an S3 bucket, which is a fundamental container used to store objects (files) in object storage. In this pipeline, S3 will serve as the final destination for storing the processed data streams.
+
 
 - ***Create S3 Bucket*** : Set up an Minio S3 bucket to store the processed data in real-time.
 - ***Define Data Organization***: Determine the appropriate folder structure and naming conventions for organizing the data in the S3 bucket based on factors such as time, source, or data type.
 
 - ***Configure Access and Permissions*** : Create  appropriate access key, secret key  and permissions for the Minio object storage  to ensure data security and compliance with organizational policies.
-
-
 
 
 
@@ -68,12 +70,12 @@ MinIO is a high-performance, S3 compatible object store. A MinIO "bucket" is equ
 
 **Prerequisites**
 
+
  - Understanding of **Docker, docker compose** and **network**
  - **S3 bucket created**: We will use Mini object storage
  -  Basic understanding of Python and apache spark structured streaming
  -  Knowledge of how kafka works: topic, brokers, partitions and kafka streaming
-- Basic undestanding of distributed systems
-
+ -   Basic undestanding of distributed systems
 
 
 
@@ -85,6 +87,32 @@ MinIO is a high-performance, S3 compatible object store. A MinIO "bucket" is equ
 - Clone the repository and navigate to the project directory
 
 
+
+```
+ git clone https://github.com/fermat01/Building-streaming-ETL-Data-pipeline.git
+ ```
+and 
+
+
+```
+ cd Building-streaming-ETL-Data-pipeline
+ ```
+c. Will create dags and logs directories for apache airflow and create a network from terminal
+c.. Create two folders dags and logs for apache airflow:
+
+```
+mkdir dags/ logs/
+```
+and give them permission
+
+
+
+```
+chmod -R 777 dags/
+chmod -R 777 logs/
+```
+
+d. From terminal create a network
 ```
  git clone https://github.com/fermat01/Building-streaming-ETL-Data-pipeline.git
  ```
@@ -96,6 +124,15 @@ and
  ```
 We'll create dags and logs directories for apache airflow from terminal
 
+**Create all services using docker compose by using**
+
+```
+docker compose up -d 
+
+```
+1.  Access airflow UI at http://localhost:8080 using given credentials username: *``` airflow01 ```* and password: *``` airflow01 ```*
+
+<img src="images/airflow-ui.gif" > 
 
 ```
 mkdir dags/ logs/
@@ -109,13 +146,36 @@ chmod -R 777 logs/
 ```
 
 
-
 **Create all services using docker compose**
+
+=======
+2.  Access the Kafka UI at http://localhost:8888 and  create topic name it   *``` streaming_topic```*
+   
+<img src="images/kafka-ui.gif" > 
+
+3.  Create Minio docker container
+
+```  
+docker run \
+   -p 9090:9000 \
+   -p 9001:9001 \
+   --name minio \
+   -v ~/minio/data:/data \
+   -e "MINIO_ROOT_USER=MINIOAIRFLOW01" \
+   -e "MINIO_ROOT_PASSWORD=AIRFLOW123" \
+   quay.io/minio/minio server /data --console-address ":9001"
+```
+ and acess minio  UI using ``` http://127.0.0.1:9001 ``` and credentials uername: *``` MINIOAIRFLOW01 ```* and password: *``` AIRFLOW123 ```*
+
+
+ <img src="images/minio-ui.gif" > 
+
+## 4. Copy your Spark script into the Docker container:
 
 ```
 docker compose up -d 
 
-```
+
 <img src="images/all_services.png" > 
 
 
@@ -191,6 +251,9 @@ ls -l
  **Download required jar files**
    
    ```
+
+curl -O https://repo1.maven.org/maven2/org/apache/kafka/kafka-clients/3.3.0/kafka-clients-3.3.0.jar
+curl -O https://repo1.maven.org/maven2/org/apache/spark/spark-sql-kafka-0-10_2.12/3.3.0/spark-sql-kafka-0-10_2.12-3.3.0.jar
 curl -O https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-aws/3.2.0/hadoop-aws-3.2.0.jar
 curl -O https://repo1.maven.org/maven2/com/amazonaws/aws-java-sdk-s3/1.11.375/aws-java-sdk-s3-1.11.375.jar
 curl -O https://repo1.maven.org/maven2/org/apache/commons/commons-pool2/2.11.0/commons-pool2-2.11.0.jar
@@ -201,6 +264,7 @@ curl -O https://repo1.maven.org/maven2/org/apache/spark/spark-token-provider-kaf
    ```
 
 *Go back using*
+
 
  ```
  cd ..
@@ -228,6 +292,8 @@ And voilà, it worked !!!
  <img src="images/parquet_data_bucket.png" > 
 
 <ol>
+
+ 
 
 
 
