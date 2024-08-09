@@ -189,7 +189,8 @@ Copy your Spark script into the Docker container:
 <br><br>
 
  **Download required jar files**
- From scripts folder, copy the download_jars.sh to spark_master container using:
+ 
+<li> From scripts folder, copy the download_jars.sh to spark_master container using: </li>
 
 
 
@@ -219,7 +220,7 @@ From scripts folder, copy the run_spark_submit.sh to spark_master container usin
 ```  docker exec -it spark_master /bin/bash ```
 
 
-<li> then run hthis command to submit spark spark application from spark_master container terminal</li>
+<li> then run this command to submit spark spark application from spark_master container terminal</li>
 
 
 ``` ./run_spark_submit.sh ```
