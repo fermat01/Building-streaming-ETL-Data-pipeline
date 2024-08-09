@@ -147,7 +147,7 @@ Access the Kafka UI at <a href="http://localhost:8888 ">http://localhost:8888</a
 
 
 <li>
- acess Minio  UI using <a href="http://127.0.0.1:9001">http://127.0.0.1:9001</a> and with  credentials uername: $\color{orange}{MINIOAIRFLOW01}$ and password:  $\color{orange}{ AIRFLOW123 }$ 
+ Acess Minio  UI using <a href="http://127.0.0.1:9001">http://127.0.0.1:9001</a> and with  credentials uername: $\color{orange}{MINIOAIRFLOW01}$ and password:  $\color{orange}{ AIRFLOW123 }$ 
 </li>
 
 
@@ -161,7 +161,7 @@ Before submitting spark applcation, it is important to understant how spark comm
 Make sure to verify the broker ports and hostnames.
 Required jar files must be downloaded.
 <ol>
-  <li> Make sure Minio has a right API URL $\color{orange}{http://minio:9000}$ after to cummunicate with spark
+  <li> Make sure Minio has a right API URL <a href="http://127.0.0.1:9001">[http://minio:9000](http://minio:9000)</a>  to communicate with spark
   <br><br>
     <img src="images/spark_session.png" > 
 </li>
