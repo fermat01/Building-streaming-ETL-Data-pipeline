@@ -127,8 +127,8 @@ def main():
     secret_key = "ENTER_YOUR_MINIO_SECRET_KEY"
     brokers = "broker-1:9092,broker-2:9093,broker-3:9094"
     topic = "ENTER_CREATED_KAFKA_TOPIC_NAME"
-    path = "ENETER_YOUR_BUCKET_PATH"
-    checkpoint_location = "ENETER_YOUR_CHECKPOINT_LOCATION"
+    path = "ENTER_YOUR_BUCKET_PATH"
+    checkpoint_location = "ENTER_YOUR_CHECKPOINT_LOCATION"
 
     spark = initialize_spark_session(app_name, access_key, secret_key)
     if spark:
