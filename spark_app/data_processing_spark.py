@@ -28,7 +28,7 @@ def initialize_spark_session(app_name, access_key, secret_key):
             .appName(app_name) \
             .config("spark.hadoop.fs.s3a.access.key", access_key) \
             .config("spark.hadoop.fs.s3a.secret.key", secret_key) \
-            .config("spark.hadoop.fs.s3a.endpoint", "http://127.0.0.1:9090")\
+            .config("spark.hadoop.fs.s3a.endpoint", "http://minio:9000")\
             .config("spark.hadoop.fs.s3a.path.style.access", "true") \
             .config("spark.hadoop.fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem") \
             .getOrCreate()
@@ -110,25 +110,25 @@ def initiate_streaming_to_bucket(df, path, checkpoint_location):
     :param checkpoint_location: Checkpoint location for streaming.
     :return: None
     """
-    logger.info("Initiating streaming process...")
+    logger.info("Initiating streaming process to minio object storage...")
     stream_query = (df.writeStream
                     .format("parquet")
                     .outputMode("append")
+                    .trigger(processingTime='1 second') \
                     .option("path", path)
                     .option("checkpointLocation", checkpoint_location)
                     .start())
     stream_query.awaitTermination()
 
-
 def main():
    
     app_name = "SparkStructuredStreamingToMinioS3"
-    access_key = "ENTER_YOUR_ACCESS_KEY"
-    secret_key = "ENTER_YOUR_SECRET_KEY"
-    brokers = "kafka_broker_1:19092,kafka_broker_2:19093,kafka_broker_3:19094"
-    topic = "TOPIC_NAME"
-    path = "BUCKET_PATH"
-    checkpoint_location = "CHECKPOINT_LOCATION"
+    access_key = "ENTER_YOUR_MINIO_ACCESS_KEY"
+    secret_key = "ENTER_YOUR_MINIO_SECRET_KEY"
+    brokers = "broker-1:9092,broker-2:9093,broker-3:9094"
+    topic = "ENTER_CREATED_KAFKA_TOPIC_NAME"
+    path = "ENETER_YOUR_BUCKET_PATH"
+    checkpoint_location = "ENETER_YOUR_CHECKPOINT_LOCATION"
 
     spark = initialize_spark_session(app_name, access_key, secret_key)
     if spark:
