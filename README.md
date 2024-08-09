@@ -196,17 +196,7 @@ Copy your Spark script into the Docker container:
  docker cp download_jars.sh spark_master:/opt/bitnami/spark/
     
     ```
-<!--  
-   ```
-curl -O https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-aws/3.2.0/hadoop-aws-3.2.0.jar
-curl -O https://repo1.maven.org/maven2/com/amazonaws/aws-java-sdk-s3/1.11.375/aws-java-sdk-s3-1.11.375.jar
-curl -O https://repo1.maven.org/maven2/org/apache/commons/commons-pool2/2.11.0/commons-pool2-2.11.0.jar
-curl -O https://repo1.maven.org/maven2/org/apache/spark/spark-streaming_2.12/3.3.0/spark-streaming_2.12-3.3.0.jar
-curl -O https://packages.confluent.io/maven/org/apache/kafka/kafka-clients/7.7.0-ce/kafka-clients-7.7.0-ce.jar
-curl -O https://repo1.maven.org/maven2/org/apache/spark/spark-sql-kafka-0-10_2.12/3.3.0/spark-sql-kafka-0-10_2.12-3.3.0.jar
-curl -O https://repo1.maven.org/maven2/org/apache/spark/spark-token-provider-kafka-0-10_2.12/3.3.0/spark-token-provider-kafka-0-10_2.12-3.3.0.jar
-   ```
--->
+
 
 then run this command from terminal to download all required jar files.
 
@@ -243,26 +233,10 @@ docker cp run_spark_submit.sh spark_master:/opt/bitnami/spark/
 ```
 ./run_spark_submit.sh
 
-
 ```
 
 
-<!--  
 
-```
- /opt/bitnami/spark/bin/spark-submit \
---master local[2] \
---jars /opt/bitnami/spark/jars/hadoop-aws-3.2.0.jar,\
-/opt/bitnami/spark/jars/aws-java-sdk-s3-1.11.375.jar,\
-/opt/bitnami/spark/jars/commons-pool2-2.11.0.jar,\
-/opt/bitnami/spark/jars/spark-streaming_2.12-3.3.0.jar,\
-/opt/bitnami/spark/jars/kafka-clients-7.7.0-ce.jar,\
-/opt/bitnami/spark/jars/spark-sql-kafka-0-10_2.12-3.3.0.jar,\
-/opt/bitnami/spark/jars/spark-token-provider-kafka-0-10_2.12-3.3.0.jar \
-data_processing_spark.py
-```
-
--->
 <li>
 Go back to minio bucket to ensure that data has been uploaded.</li>
 And voilà, it worked !!!
