@@ -206,7 +206,7 @@ then run this command from terminal to download all required jar files.
 
  ``` ./download_jars.sh ```
 
-  **Submit your spark application **
+  **Submit your spark application**
 
 From scripts folder, copy the run_spark_submit.sh to spark_master container using:
 
