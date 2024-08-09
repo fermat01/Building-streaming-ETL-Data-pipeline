@@ -157,11 +157,11 @@ Access the Kafka UI at <a href="http://localhost:8888 ">http://localhost:8888</a
 </ol> 
 
 ## 4. Spark application
-Before submitting spark applcation, it is important to understant how spark communicate with apache kafka and Minio container based object storage when using docker. here we need to check minio container log to get right API url for spark application.
+Before submitting spark applcation, it is important to understant how spark communicate with apache kafka and Minio container based object storage when using docker. 
 Make sure to verify the broker ports and hostnames.
 Required jar files must be downloaded.
 <ol>
-  <li> Change the Minio right $\color{orange}{API-URL}$ after checking minio docker container with yours.
+  <li> Make sure Minio has a right API URL $\color{orange}{http://minio:9000}$ after to cummunicate with spark
   <br><br>
     <img src="images/spark_session.png" > 
 </li>
@@ -185,31 +185,18 @@ Copy your Spark script into the Docker container:
  <img src="images/copy-spark-file-to-container.png" > 
 </li>
 
-<li> and go inside spark container master node</li>
-
-```
- docker exec -it spark_master /bin/bash
-```
 
 <br><br>
 
- <img src="images/inside-spark-container.png" > 
-
- and to list all jar files in jars folder and download the required jar files for spark application
-</li>
-
-
-```
-cd jars
-```
-
-and 
-```
-ls -l
-```
-
  **Download required jar files**
-   
+ From scripts folder, copy the download_jars.sh to spark_master container using:
+
+
+ ```
+ docker cp download_jars.sh spark_master:/opt/bitnami/spark/
+    
+    ```
+<!--  
    ```
 curl -O https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-aws/3.2.0/hadoop-aws-3.2.0.jar
 curl -O https://repo1.maven.org/maven2/com/amazonaws/aws-java-sdk-s3/1.11.375/aws-java-sdk-s3-1.11.375.jar
@@ -219,13 +206,48 @@ curl -O https://packages.confluent.io/maven/org/apache/kafka/kafka-clients/7.7.0
 curl -O https://repo1.maven.org/maven2/org/apache/spark/spark-sql-kafka-0-10_2.12/3.3.0/spark-sql-kafka-0-10_2.12-3.3.0.jar
 curl -O https://repo1.maven.org/maven2/org/apache/spark/spark-token-provider-kafka-0-10_2.12/3.3.0/spark-token-provider-kafka-0-10_2.12-3.3.0.jar
    ```
+-->
 
-*Go back using*
+then run this command from terminal to download all required jar files.
+
+
 
  ```
- cd ..
-  ```
-  **Submit your spark application by using**
+
+ ./download_jars.sh
+
+ ```
+
+  **Submit your spark application **
+
+From scripts folder, copy the run_spark_submit.sh to spark_master container using:
+
+
+```
+docker cp run_spark_submit.sh spark_master:/opt/bitnami/spark/
+
+```
+
+
+
+ <li> Go inside spark container master node using </li>
+
+```
+ docker exec -it spark_master /bin/bash
+```
+
+
+<li> then run hthis command to submit spark spark application from spark_master container terminal</li>
+
+
+```
+./run_spark_submit.sh
+
+
+```
+
+
+<!--  
 
 ```
  /opt/bitnami/spark/bin/spark-submit \
@@ -239,6 +261,8 @@ curl -O https://repo1.maven.org/maven2/org/apache/spark/spark-token-provider-kaf
 /opt/bitnami/spark/jars/spark-token-provider-kafka-0-10_2.12-3.3.0.jar \
 data_processing_spark.py
 ```
+
+-->
 <li>
 Go back to minio bucket to ensure that data has been uploaded.</li>
 And voilà, it worked !!!
