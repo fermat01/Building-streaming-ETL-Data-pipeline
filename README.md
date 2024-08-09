@@ -192,48 +192,37 @@ Copy your Spark script into the Docker container:
  From scripts folder, copy the download_jars.sh to spark_master container using:
 
 
- ```
- docker cp download_jars.sh spark_master:/opt/bitnami/spark/
+
+ ``` docker cp download_jars.sh spark_master:/opt/bitnami/spark/  ```
+ 
     
-    ```
+    
 
 
 then run this command from terminal to download all required jar files.
 
 
 
- ```
-
- ./download_jars.sh
-
- ```
+ ``` ./download_jars.sh ```
 
   **Submit your spark application **
 
 From scripts folder, copy the run_spark_submit.sh to spark_master container using:
 
 
-```
-docker cp run_spark_submit.sh spark_master:/opt/bitnami/spark/
-
-```
+``` docker cp run_spark_submit.sh spark_master:/opt/bitnami/spark ```
 
 
 
  <li> Go inside spark container master node using </li>
 
-```
- docker exec -it spark_master /bin/bash
-```
+```  docker exec -it spark_master /bin/bash ```
 
 
 <li> then run hthis command to submit spark spark application from spark_master container terminal</li>
 
 
-```
-./run_spark_submit.sh
-
-```
+``` ./run_spark_submit.sh ```
 
 
 
@@ -245,7 +234,7 @@ And voilà, it worked !!!
 <br><br>
  <img src="images/parquet_data_bucket.png" > 
 
-<ol>
+</ol>
 
 
 
