@@ -24,7 +24,7 @@ In this project, we build a real-time ETL (Extract, Transform, and Load) data pi
 
 Our project is composed of several services:
 
-### A. Apache kafka 
+### - a. Apache kafka 
 
 - ***Set up Kafka Cluster***: Deploy a Kafka cluster with multiple brokers for high availability and scalability.
 
@@ -36,7 +36,7 @@ Our project is composed of several services:
 <img src="images/DataInKafka.gif" > 
 
   
-### B. Automation and Orchestration: apache airflow
+### - b. Automation and Orchestration: apache airflow
 
 Leverage automation and orchestration tools (e.g., Apache Airflow) to manage and coordinate the various components of the pipeline, enabling efficient deployment, scheduling, and maintenance.
 
@@ -44,7 +44,7 @@ Leverage automation and orchestration tools (e.g., Apache Airflow) to manage and
 <img src="images/airflow-streaming.png" > 
 
 
-### C. Data Processing with Apache Spark
+### - c. Data Processing with Apache Spark
 
 Apache Spark is a powerful open-source distributed processing framework that excels at processing large-scale data streams. In this pipeline, Spark will consume data from Kafka topics, perform transformations and computations, and prepare the data for storage in Amazon S3.
 
@@ -52,8 +52,8 @@ Apache Spark is a powerful open-source distributed processing framework that exc
 - ***Define Transformations*** : Implement the necessary transformations and computations on the incoming data streams using Spark's powerful APIs. This may include data cleaning, filtering, aggregations, and enrichment from other data sources.
 - ***Integrate with Amazon S3*** : Configure Spark to write the processed data to Minio S3 object storage in a suitable format (e.g., Parquet, Avro, or CSV) for efficient storage and querying.
 
-### D.  Data Storage in Minio S3
-MinIO is a high-performance, S3 compatible object store. A MinIO "bucket" is equivalent to an S3 bucket, which is a fundamental container used to store objects (files) in object storage. In this pipeline, S3 will serve as the final destination for storing the processed data streams.
+### - d.  Data Storage in Minio S3
+Minio is a high-performance, S3 compatible object store. A MinIO "bucket" is equivalent to an S3 bucket, which is a fundamental container used to store objects (files) in object storage. In this pipeline, S3 will serve as the final destination for storing the processed data streams.
 
 - ***Create S3 Bucket*** : Set up an Minio S3 bucket to store the processed data in real-time.
 - ***Define Data Organization***: Determine the appropriate folder structure and naming conventions for organizing the data in the S3 bucket based on factors such as time, source, or data type.
@@ -72,7 +72,7 @@ MinIO is a high-performance, S3 compatible object store. A MinIO "bucket" is equ
 **Prerequisites**
 
  - Understanding of **Docker, docker compose** and **network**
- - **S3 bucket created**: We will use Mini object storage
+ - **S3 bucket created**: We will use Minio object storage
  -  Basic understanding of Python and apache spark structured streaming
  -  Knowledge of how kafka works: topic, brokers, partitions and kafka streaming
 - Basic undestanding of distributed systems
@@ -156,12 +156,12 @@ Access the Kafka UI at <a href="http://localhost:8888 ">http://localhost:8888</a
 
 </ol> 
 
-## 4. Spark application
+## 5. Spark application
 Before submitting spark applcation, it is important to understant how spark communicate with apache kafka and Minio container based object storage when using docker. 
 Make sure to verify the broker ports and hostnames.
 Required jar files must be downloaded.
 <ol>
-  <li> Make sure Minio has a right API URL <a href="http://127.0.0.1:9001">[http://minio:9000](http://minio:9000)</a>  to communicate with spark
+  <li> Make sure Minio has a right API URL  <a href="http://minio:9000">http://minio:9000</a> to communicate with spark.
   <br><br>
     <img src="images/spark_session.png" > 
 </li>
@@ -239,7 +239,7 @@ And voilà, it worked !!!
 
 
 
-## 5. Conclusion
+## 6. Conclusion
 
 This project successfully demonstrates the construction of a real-time ETL (Extract, Transform, Load) data pipeline using Apache Kafka for data ingestion, Apache Spark for data processing, and Minio S3 bucket for data storage. By leveraging open APIs, we were able to ingest real-time data, process and transform it efficiently, and load it into a robust storage system for further analysis.
 The use of Apache Kafka provided a scalable and fault-tolerant platform for data ingestion, ensuring that data streams were handled effectively. Apache Spark enabled real-time data processing and transformation, offering powerful capabilities for handling large datasets with low latency. Finally, Minio S3 object storage served as a reliable and scalable storage solution, allowing for seamless integration with various analytics tools.
