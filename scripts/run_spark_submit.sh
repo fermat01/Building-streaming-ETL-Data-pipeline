@@ -1,6 +1,9 @@
 #!/bin/bash
 
-# Define the path to the Spark submit command
+# Define the Docker container name
+CONTAINER_NAME="spark_master"
+
+# Define the path to the Spark submit command inside the container
 SPARK_SUBMIT="/opt/bitnami/spark/bin/spark-submit"
 
 # Define the master
@@ -18,5 +21,5 @@ JARS="/opt/bitnami/spark/jars/hadoop-aws-3.2.0.jar,\
 # Define the Python script to run
 SCRIPT="data_processing_spark.py"
 
-# Run the Spark submit command
-$SPARK_SUBMIT --master $MASTER --jars $JARS $SCRIPT
+# Run the Spark submit command inside the Docker container
+docker exec -it $CONTAINER_NAME $SPARK_SUBMIT --master $MASTER --jars $JARS $SCRIPT
