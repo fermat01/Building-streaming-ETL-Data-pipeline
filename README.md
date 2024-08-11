@@ -190,13 +190,13 @@ copy your Spark script into the Docker container:
 
  **Download required jar files**
  
-<li> From scripts folder,run this command in terminal to download all required jar files using: </li>
+<li> From scripts folder, run this command in terminal to download all required jar files using: </li>
 
  ``` ./download_jars.sh ```
 
   **Submit your spark application**
 
-<li> In terminal run this command to submit spark application</li>
+<li> In terminal, run this command to submit spark application</li>
 
 
 ``` ./run_spark_submit.sh ```
