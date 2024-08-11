@@ -173,8 +173,8 @@ spark version can be verified using :<code>/opt/bitnami/spark/bin/spark-submit -
 
 </li>
 
-<li>
-Copy your Spark script into the Docker container:
+<li> From spark_app,
+copy your Spark script into the Docker container:
 
 <code>docker cp data_processing_spark.py spark_master:/opt/bitnami/spark/</code>
 
@@ -190,37 +190,13 @@ Copy your Spark script into the Docker container:
 
  **Download required jar files**
  
-<li> From scripts folder, copy the download_jars.sh to spark_master container using: </li>
-
-
-
- ``` docker cp download_jars.sh spark_master:/opt/bitnami/spark/  ```
- 
-    
-    
-
-
-then run this command from terminal to download all required jar files.
-
-
+<li> From scripts folder,run this command in terminal to download all required jar files using: </li>
 
  ``` ./download_jars.sh ```
 
   **Submit your spark application**
 
-From scripts folder, copy the run_spark_submit.sh to spark_master container using:
-
-
-``` docker cp run_spark_submit.sh spark_master:/opt/bitnami/spark ```
-
-
-
- <li> Go inside spark container master node using </li>
-
-```  docker exec -it spark_master /bin/bash ```
-
-
-<li> then run this command to submit spark application from spark_master container terminal</li>
+<li> In terminal run this command to submit spark application</li>
 
 
 ``` ./run_spark_submit.sh ```
