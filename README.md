@@ -97,19 +97,7 @@ and
 ```
  cd Building-streaming-ETL-Data-pipeline
  ```
-We'll create dags and logs directories for apache airflow from terminal
 
-
-```
-mkdir dags/ logs/
-```
-and give them permission
-
-
-```
-chmod -R 777 dags/
-chmod -R 777 logs/
-```
 
 
 
@@ -182,7 +170,7 @@ copy your Spark script into the Docker container:
 
 <br><br>
 
- <img src="images/copy-spark-file-to-container.png" > 
+ <img src="images/scripts.png" > 
 </li>
 
 
@@ -191,6 +179,11 @@ copy your Spark script into the Docker container:
  **Download required jar files**
  
 <li> From scripts folder, run this command in terminal to download all required jar files using: </li>
+
+
+ <img src="images/copy-spark-file-to-container.png" > 
+ 
+<br><br>
 
  ``` ./download_jars.sh ```
 
