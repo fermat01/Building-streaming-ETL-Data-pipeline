@@ -165,20 +165,21 @@ spark version can be verified using :<code>/opt/bitnami/spark/bin/spark-submit -
 
 <br><br>
 
- **Download required jar files**
+ **Download required jar files and submit your spark application**
  
-<li> From scripts folder, run this command in terminal to download all required jar files using: </li>
+ From "scripts" folder, there are 3 files: 
 
 
  <img src="images/scripts.png" > 
  
 <br><br>
+<li> run this command in your  terminal to download all required jar files using </li>
 
  ``` ./download_jars.sh ```
 
-  **Submit your spark application**
 
-<li> From scripts folder, run this command in terminal to submit spark application</li>
+
+<li> From same scripts folder, run this command in your terminal to submit spark application</li>
 
 
 ``` ./run_spark_submit.sh ```
