@@ -167,7 +167,7 @@ spark version can be verified using :<code>/opt/bitnami/spark/bin/spark-submit -
 
  **Download required jar files and submit your spark application**
  
- From "scripts" folder, there are 3 files: 
+ From **scripts** folder, there are 3 files: 
 
 
  <img src="images/scripts.png" > 
