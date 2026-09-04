@@ -1,0 +1,23 @@
+FROM spark:3.5.8
+
+USER root
+
+ENV SPARK_HOME=/opt/spark
+
+ARG KAFKA_CLIENT_VERSION=3.4.1
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl ca-certificates \
+    && curl -fsSL \
+        "https://repo1.maven.org/maven2/org/apache/kafka/kafka-clients/${KAFKA_CLIENT_VERSION}/kafka-clients-${KAFKA_CLIENT_VERSION}.jar" \
+        -o "/opt/spark/jars/kafka-clients-${KAFKA_CLIENT_VERSION}.jar" \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Python dependencies used by the Spark application
+RUN pip install --no-cache-dir \
+    requests
+
+WORKDIR ${SPARK_HOME}/work-dir
+
+USER spark
