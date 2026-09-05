@@ -49,6 +49,15 @@ class PipelineContractTests(unittest.TestCase):
         self.assertIn("ANALYTICS_PATH", analytics)
         self.assertNotIn("local[", processing + analytics)
 
+        submit_script = (ROOT / "scripts/run_spark_submit.sh").read_text()
+        self.assertIn("--py-files", submit_script)
+        self.assertIn("--files", submit_script)
+        self.assertIn("schema_codec.py", submit_script)
+        self.assertIn("user_event.avsc", submit_script)
+        self.assertIn(
+            "A data-quality Spark application is already active", submit_script
+        )
+
     def test_compose_keeps_standalone_spark_topology(self):
         compose = (ROOT / "docker-compose.yml").read_text()
         for service in ("spark-master:", "spark-worker-1:", "spark-worker-2:"):

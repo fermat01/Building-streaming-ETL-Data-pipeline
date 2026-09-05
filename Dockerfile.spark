@@ -16,7 +16,8 @@ RUN apt-get update \
 
 # Python dependencies used by the Spark application
 RUN pip install --no-cache-dir \
-    requests
+    requests \
+    fastavro==1.9.7
 
 WORKDIR ${SPARK_HOME}/work-dir
 

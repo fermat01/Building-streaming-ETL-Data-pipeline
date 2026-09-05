@@ -11,8 +11,10 @@ from pyspark.sql.functions import (
     to_date,
     to_timestamp,
     trim,
+    udf,
     when,
 )
+from pyspark.sql.types import StringType
 
 from streaming_common import (
     CHECKPOINT_ROOT,
@@ -23,6 +25,7 @@ from streaming_common import (
     user_schema,
     validate_configuration,
 )
+from schema_codec import decode_confluent_payload
 
 logger = logging.getLogger("spark_data_quality")
 logging.basicConfig(
@@ -32,9 +35,10 @@ logging.basicConfig(
 
 
 def parse_and_validate(stream: DataFrame) -> tuple[DataFrame, DataFrame]:
-    """Parse Kafka JSON and split malformed or invalid events from valid data."""
+    """Decode governed Avro or legacy JSON, then split quality failures."""
+    decode_payload = udf(decode_confluent_payload, StringType())
     parsed = (
-        stream.select(col("value").cast("string").alias("raw_json"))
+        stream.select(decode_payload(col("value")).alias("raw_json"))
         .withColumn("data", from_json(col("raw_json"), user_schema()))
         .select("raw_json", "data.*")
         .withColumn("country", coalesce(col("country"), col("nation")))

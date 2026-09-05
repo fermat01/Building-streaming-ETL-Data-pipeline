@@ -53,6 +53,7 @@ services:
 
     volumes:
       - ./dags:/opt/airflow/dags
+      - ./schemas:/opt/airflow/schemas:ro
       - ./logs:/opt/airflow/logs
       - ./scripts:/opt/airflow/scripts
 
@@ -84,6 +85,7 @@ services:
 
     volumes:
       - ./dags:/opt/airflow/dags
+      - ./schemas:/opt/airflow/schemas:ro
       - ./logs:/opt/airflow/logs
       - ./scripts:/opt/airflow/scripts
 
@@ -119,6 +121,7 @@ services:
 
     volumes:
       - ./dags:/opt/airflow/dags
+      - ./schemas:/opt/airflow/schemas:ro
       - ./logs:/opt/airflow/logs
       - ./scripts:/opt/airflow/scripts
 
@@ -528,7 +531,17 @@ services:
         org.apache.kafka.common.security.scram.ScramLoginModule required
         username="${KAFKA_SCHEMA_REGISTRY_USERNAME}" password="${KAFKA_SCHEMA_REGISTRY_PASSWORD}";
 
+      SCHEMA_REGISTRY_KAFKASTORE_TOPIC_REPLICATION_FACTOR: 3
+      SCHEMA_REGISTRY_SCHEMA_COMPATIBILITY_LEVEL: BACKWARD_TRANSITIVE
+
       SCHEMA_REGISTRY_LISTENERS: "http://0.0.0.0:8081"
+
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8081/subjects >/dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
 
   # ============================================================
   # Kafka Connect
@@ -698,6 +711,7 @@ services:
 
     volumes:
       - ./spark_app:/opt/spark/work-dir/spark_app:ro
+      - ./schemas:/opt/spark/work-dir/schemas:ro
 
     env_file:
       - .env
@@ -737,6 +751,7 @@ services:
 
     volumes:
       - ./spark_app:/opt/spark/work-dir/spark_app:ro
+      - ./schemas:/opt/spark/work-dir/schemas:ro
 
     environment:
       SPARK_WORKER_CORES: 2
@@ -771,6 +786,7 @@ services:
 
     volumes:
       - ./spark_app:/opt/spark/work-dir/spark_app:ro
+      - ./schemas:/opt/spark/work-dir/schemas:ro
 
     environment:
       SPARK_WORKER_CORES: 2

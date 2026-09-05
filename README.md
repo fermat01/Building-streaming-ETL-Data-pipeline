@@ -186,6 +186,57 @@ The MinIO console is available at http://localhost:9001. The local contract test
 python -m unittest discover -s tests -v
 ```
 
+## Schema Governance
+
+The pipeline uses Confluent Schema Registry as the central contract registry
+for new Kafka events. Avro was selected instead of continuing with raw JSON
+because it gives the producer a typed, registered contract and lets Registry
+compatibility checks reject unsafe producer changes before they reach Kafka.
+
+The canonical contract is [schemas/user_event.avsc](schemas/user_event.avsc),
+version 1, with the topic-value subject `streaming-topic-value`. Airflow uses
+Confluent's `AvroSerializer` and topic subject naming strategy; schema IDs are
+assigned by Schema Registry and are never hardcoded. Schema Registry stores its
+own metadata in the existing replicated `_schemas` topic and uses the existing
+SCRAM identity. The producer's Registry URL and credentials are externalized
+through `.env` variables.
+
+The configured compatibility policy is `BACKWARD_TRANSITIVE`. A consumer can
+therefore read data written with the current and previous compatible contracts.
+An additive field such as an optional `middle_name` with a default is
+compatible; changing `age` from an integer to a string is rejected. The
+opt-in tests use `SCHEMA_REGISTRY_INTEGRATION=1` and can exercise registration,
+retrieval, serialization, deserialization, and both evolution outcomes against
+a running Registry.
+
+```text
+Airflow producer
+    | AvroSerializer
+    v
+Schema Registry <---- SCRAM-backed _schemas topic
+    | schema ID in Confluent wire format
+    v
+Kafka streaming-topic
+    v
+Spark decoder -> existing StructType -> data-quality validation
+                      |                 |
+                 processed/          quarantine/
+```
+
+Spark decodes the Confluent envelope and then reuses the existing logical
+fields and business validation. Schema validation and data quality remain
+separate: Avro enforces field types and the producer contract, while Spark
+continues to quarantine empty fields, invalid ages, and invalid coordinates.
+Malformed Avro payloads are routed through the existing controlled quarantine
+path with a schema diagnostic; quarantine is not presented as a Kafka
+deserialization dead-letter topic.
+
+The reader also retains a legacy JSON fallback so historical messages already
+in `streaming-topic` remain readable when `startingOffsets=earliest` is used.
+No topic, Kafka volume, checkpoint, or MinIO data is reset or deleted by this
+phase. New messages use Avro; a future migration can remove the fallback after
+the legacy data has been intentionally drained or isolated.
+
 ### CI/CD
 
 The project includes runtime unit tests in

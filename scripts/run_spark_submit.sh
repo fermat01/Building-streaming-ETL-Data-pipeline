@@ -37,6 +37,8 @@ MASTER="spark://spark-master:7077"
 SCRIPT="data_processing_spark.py"
 
 CONTAINER_SCRIPT="${SPARK_HOME}/work-dir/spark_app/${SCRIPT}"
+CONTAINER_CODEC="${SPARK_HOME}/work-dir/spark_app/schema_codec.py"
+CONTAINER_SCHEMA="${SPARK_HOME}/work-dir/schemas/user_event.avsc"
 
 # ============================================================
 # Dependencies
@@ -107,6 +109,32 @@ if ! docker exec "${SPARK_CONTAINER}" \
     exit 1
 fi
 
+if ! docker exec "${SPARK_CONTAINER}" \
+    test -f "${CONTAINER_CODEC}" || ! docker exec "${SPARK_CONTAINER}" \
+    test -f "${CONTAINER_SCHEMA}"; then
+    echo "ERROR: Spark schema decoder or canonical schema is not mounted."
+    exit 1
+fi
+
+# A second data-quality application cannot share the processed/quarantine
+# checkpoints. Refuse duplicate submissions before they can corrupt progress.
+ACTIVE_DATA_QUALITY_APPS=$(curl -fsS http://localhost:8085/json/ | python3 -c '
+import json
+import sys
+
+payload = json.load(sys.stdin)
+apps = payload.get("activeapps", payload.get("activeApps", []))
+for app in apps:
+    if app.get("name") == "SparkStructuredStreamingDataQuality":
+        print("{} ({})".format(app.get("id"), app.get("state")))
+' )
+if [ -n "${ACTIVE_DATA_QUALITY_APPS}" ]; then
+    echo "ERROR: A data-quality Spark application is already active:"
+    echo "${ACTIVE_DATA_QUALITY_APPS}"
+    echo "Stop the existing application before retrying this command."
+    exit 1
+fi
+
 # ============================================================
 # Submit distributed Spark application
 # ============================================================
@@ -131,6 +159,8 @@ docker exec "${SPARK_CONTAINER}" \
     --conf "spark.jars.ivy=${IVY_CACHE}" \
     --jars "${KAFKA_CLIENT_JAR}" \
     --packages "${PACKAGES}" \
+    --py-files "${CONTAINER_CODEC}" \
+    --files "${CONTAINER_SCHEMA}" \
     "${CONTAINER_SCRIPT}"
 
 echo ""

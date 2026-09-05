@@ -99,6 +99,8 @@ authorize --allow-principal "User:${KAFKA_CONNECT_USERNAME}" --operation DESCRIB
 
 # Schema Registry owns the compacted schema topic.
 authorize --allow-principal "User:${KAFKA_SCHEMA_REGISTRY_USERNAME}" --operation READ --operation WRITE --operation DESCRIBE --topic _schemas
+authorize --allow-principal "User:${KAFKA_SCHEMA_REGISTRY_USERNAME}" --operation DescribeConfigs --topic _schemas
+authorize --allow-principal "User:${KAFKA_SCHEMA_REGISTRY_USERNAME}" --operation READ --group schema-registry
 
 # Kafka UI is read-only across topics and can inspect cluster metadata.
 authorize --allow-principal "User:${KAFKA_UI_USERNAME}" --operation READ --operation DESCRIBE --topic '*'

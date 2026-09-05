@@ -1,10 +1,10 @@
 import hashlib
-import json
 import logging
 import os
 import time
 import uuid
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from typing import List
 
 import requests
@@ -28,6 +28,16 @@ KAFKA_SECURITY_PROTOCOL = os.getenv("KAFKA_SECURITY_PROTOCOL", "SASL_PLAINTEXT")
 KAFKA_SASL_MECHANISM = os.getenv("KAFKA_SASL_MECHANISM", "SCRAM-SHA-256")
 KAFKA_PRODUCER_USERNAME = os.getenv("KAFKA_PRODUCER_USERNAME")
 KAFKA_PRODUCER_PASSWORD = os.getenv("KAFKA_PRODUCER_PASSWORD")
+SCHEMA_REGISTRY_URL = os.getenv("SCHEMA_REGISTRY_URL", "http://schema_registry:8081")
+SCHEMA_REGISTRY_USERNAME = os.getenv("KAFKA_SCHEMA_REGISTRY_USERNAME")
+SCHEMA_REGISTRY_PASSWORD = os.getenv("KAFKA_SCHEMA_REGISTRY_PASSWORD")
+SCHEMA_REGISTRY_SUBJECT = os.getenv("SCHEMA_REGISTRY_SUBJECT", "streaming-topic-value")
+SCHEMA_PATH = Path(
+    os.getenv(
+        "EVENT_SCHEMA_PATH",
+        str(Path(__file__).parents[1] / "schemas" / "user_event.avsc"),
+    )
+)
 
 
 def get_user_data(url: str = API_ENDPOINT) -> dict:
@@ -98,12 +108,48 @@ def configure_kafka(servers: List[str] = KAFKA_BOOTSTRAP_SERVERS) -> Producer:
     return Producer(settings)
 
 
-def publish_to_kafka(producer: Producer, topic: str, data: dict) -> None:
+def configure_schema_serializer():
+    """Create an Avro serializer backed by the governed Schema Registry subject."""
+    from confluent_kafka.schema_registry import SchemaRegistryClient
+    from confluent_kafka.schema_registry import topic_subject_name_strategy
+    from confluent_kafka.schema_registry.avro import AvroSerializer
+
+    missing = [
+        name
+        for name, value in {
+            "SCHEMA_REGISTRY_URL": SCHEMA_REGISTRY_URL,
+            "KAFKA_SCHEMA_REGISTRY_USERNAME": SCHEMA_REGISTRY_USERNAME,
+            "KAFKA_SCHEMA_REGISTRY_PASSWORD": SCHEMA_REGISTRY_PASSWORD,
+        }.items()
+        if not value
+    ]
+    if missing:
+        raise ValueError(
+            "Missing required schema registry configuration: " + ", ".join(missing)
+        )
+
+    schema_client = SchemaRegistryClient(
+        {
+            "url": SCHEMA_REGISTRY_URL,
+            "basic.auth.user.info": f"{SCHEMA_REGISTRY_USERNAME}:{SCHEMA_REGISTRY_PASSWORD}",
+        }
+    )
+    schema_string = SCHEMA_PATH.read_text(encoding="utf-8")
+    return AvroSerializer(
+        schema_client,
+        schema_string,
+        conf={"subject.name.strategy": topic_subject_name_strategy},
+    )
+
+
+def publish_to_kafka(producer: Producer, topic: str, data: dict, serializer) -> None:
     """Send one event and raise if Kafka cannot deliver it."""
+    from confluent_kafka.serialization import MessageField, SerializationContext
+
     producer.produce(
         topic,
         key=data["event_id"],
-        value=json.dumps(data).encode("utf-8"),
+        value=serializer(data, SerializationContext(topic, MessageField.VALUE)),
         callback=delivery_status,
     )
     producer.poll(0)
@@ -128,6 +174,7 @@ def delivery_status(err, msg) -> None:
 def initiate_stream():
     """Initiates the process to stream user data to Kafka."""
     kafka_producer = configure_kafka()
+    schema_serializer = configure_schema_serializer()
     events_to_publish = max(1, STREAMING_DURATION // PAUSE_INTERVAL)
     logger.info(
         "Starting API ingestion events=%s topic=%s", events_to_publish, KAFKA_TOPIC
@@ -135,7 +182,7 @@ def initiate_stream():
     for event_number in range(events_to_publish):
         raw_data = get_user_data()
         event = format_user_data(raw_data)
-        publish_to_kafka(kafka_producer, KAFKA_TOPIC, event)
+        publish_to_kafka(kafka_producer, KAFKA_TOPIC, event, schema_serializer)
         logger.info(
             "Published API event number=%s event_id=%s",
             event_number + 1,
