@@ -1,32 +1,45 @@
-import uuid
-from datetime import datetime, timedelta
-from airflow import DAG
-from airflow.operators.python_operator import PythonOperator
-import requests
-import json
-import time
 import hashlib
-from confluent_kafka import Producer
+import json
 import logging
+import os
+import time
+import uuid
+from datetime import datetime, timedelta, timezone
+from typing import List
+
+import requests
+from airflow import DAG
+from airflow.operators.python import PythonOperator
+from confluent_kafka import Producer
 
 # Constants and configuration
-API_ENDPOINT = "https://randomuser.me/api/?results=1"
-KAFKA_BOOTSTRAP_SERVERS = ["broker-1:9092", "broker-2:9093", "broker-3:9094"]
-KAFKA_TOPIC = "streaming-topic"
-PAUSE_INTERVAL = 10
-STREAMING_DURATION = 120
+logger = logging.getLogger(__name__)
+
+API_ENDPOINT = os.getenv("RANDOM_USER_API_ENDPOINT", "https://randomuser.me/api/")
+KAFKA_BOOTSTRAP_SERVERS = os.getenv(
+    "KAFKA_BOOTSTRAP_SERVERS",
+    "broker-1:9092,broker-2:9093,broker-3:9094",
+).split(",")
+KAFKA_TOPIC = os.getenv("KAFKA_TOPIC", "streaming-topic")
+PAUSE_INTERVAL = int(os.getenv("API_POLL_INTERVAL_SECONDS", "10"))
+STREAMING_DURATION = int(os.getenv("STREAMING_DURATION_SECONDS", "120"))
+API_TIMEOUT_SECONDS = int(os.getenv("RANDOM_USER_API_TIMEOUT_SECONDS", "15"))
 
 
-def get_user_data(url=API_ENDPOINT) -> dict:
-    """Fetches random user data from the provided API endpoint."""
-    resp = requests.get(url)
-    if resp.status_code == 200:
-        return resp.json()["results"][0]
+def get_user_data(url: str = API_ENDPOINT) -> dict:
+    """Fetch one user and fail clearly so Airflow can retry the task."""
+    response = requests.get(url, params={"results": 1}, timeout=API_TIMEOUT_SECONDS)
+    response.raise_for_status()
+    results = response.json().get("results", [])
+    if not results:
+        raise ValueError("Random User API returned no users")
+    return results[0]
 
 
 def format_user_data(data_from_api: dict) -> dict:
     """Formats the fetched user data for Kafka streaming."""
-    dict_resp = {
+    return {
+        "event_id": str(uuid.uuid4()),
         "full_name": f"{data_from_api['name']['title']}. {data_from_api['name']['first']} {data_from_api['name']['last']}",
         "gender": data_from_api["gender"],
         "age": data_from_api["dob"]["age"],
@@ -34,61 +47,81 @@ def format_user_data(data_from_api: dict) -> dict:
         "city": data_from_api["location"]["city"],
         "email": data_from_api["email"],
         "phone": data_from_api["phone"],
-        "nation": data_from_api["location"]["country"],
+        "country": data_from_api["location"]["country"],
         "username": data_from_api["login"]["username"],
         "registered_date": data_from_api["registered"]["date"],
         "zip": encrypt_zip(data_from_api["location"]["postcode"]),
         "latitude": float(data_from_api["location"]["coordinates"]["latitude"]),
         "longitude": float(data_from_api["location"]["coordinates"]["longitude"]),
         "picture": data_from_api["picture"]["large"],
+        "ingested_at": datetime.now(timezone.utc).isoformat(),
     }
 
-    return dict_resp
 
-
-def encrypt_zip(zip_code):
-    """Hashes the zip code using MD5 and returns its integer representation."""
+def encrypt_zip(zip_code: object) -> str:
+    """Hash a postcode without retaining the source value."""
     zip_str = str(zip_code)
-    return int(hashlib.md5(zip_str.encode()).hexdigest(), 16)
+    return hashlib.md5(zip_str.encode("utf-8")).hexdigest()
 
 
-def configure_kafka(servers=KAFKA_BOOTSTRAP_SERVERS):
-    """Creates and returns a Kafka producer instance."""
+def configure_kafka(servers: List[str] = KAFKA_BOOTSTRAP_SERVERS) -> Producer:
+    """Create a reliable, idempotent producer for the Kafka cluster."""
     settings = {
         "bootstrap.servers": ",".join(servers),
-        "client.id": "producer_instance",
+        "client.id": "random-user-api-producer",
+        "acks": "all",
+        "enable.idempotence": True,
+        "retries": 5,
+        "delivery.timeout.ms": 120000,
     }
     return Producer(settings)
 
 
-def publish_to_kafka(producer, topic, data):
-    """Sends data to a Kafka topic."""
+def publish_to_kafka(producer: Producer, topic: str, data: dict) -> None:
+    """Send one event and raise if Kafka cannot deliver it."""
     producer.produce(
-        topic, value=json.dumps(data).encode("utf-8"), callback=delivery_status
+        topic,
+        key=data["event_id"],
+        value=json.dumps(data).encode("utf-8"),
+        callback=delivery_status,
     )
-    producer.flush()
+    producer.poll(0)
+    remaining = producer.flush(30)
+    if remaining:
+        raise RuntimeError(f"Kafka delivery timed out for {remaining} message(s)")
 
 
-def delivery_status(err, msg):
+def delivery_status(err, msg) -> None:
     """Reports the delivery status of the message to Kafka."""
     if err is not None:
-        print("Message delivery failed:", err)
+        logger.error("Kafka message delivery failed: %s", err)
     else:
-        print(
-            "Message delivered to",
+        logger.info(
+            "Kafka message delivered topic=%s partition=%s offset=%s",
             msg.topic(),
-            "[Partition: {}]".format(msg.partition()),
+            msg.partition(),
+            msg.offset(),
         )
 
 
 def initiate_stream():
     """Initiates the process to stream user data to Kafka."""
     kafka_producer = configure_kafka()
-    for _ in range(STREAMING_DURATION // PAUSE_INTERVAL):
+    events_to_publish = max(1, STREAMING_DURATION // PAUSE_INTERVAL)
+    logger.info(
+        "Starting API ingestion events=%s topic=%s", events_to_publish, KAFKA_TOPIC
+    )
+    for event_number in range(events_to_publish):
         raw_data = get_user_data()
-        kafka_formatted_data = format_user_data(raw_data)
-        publish_to_kafka(kafka_producer, KAFKA_TOPIC, kafka_formatted_data)
+        event = format_user_data(raw_data)
+        publish_to_kafka(kafka_producer, KAFKA_TOPIC, event)
+        logger.info(
+            "Published API event number=%s event_id=%s",
+            event_number + 1,
+            event["event_id"],
+        )
         time.sleep(PAUSE_INTERVAL)
+    kafka_producer.flush(30)
 
 
 if __name__ == "__main__":

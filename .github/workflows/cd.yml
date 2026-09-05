@@ -1,0 +1,40 @@
+name: CD
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish-images:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and publish Airflow image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          push: true
+          tags: ghcr.io/${{ github.repository }}/airflow:${{ github.ref_name }}
+
+      - name: Build and publish Spark image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.spark
+          push: true
+          tags: ghcr.io/${{ github.repository }}/spark:${{ github.ref_name }}

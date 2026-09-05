@@ -19,7 +19,8 @@ cd "$SCRIPT_DIR/.."
 SPARK_CONTAINER="spark-master"
 SPARK_CONTAINERS=(spark-master spark-worker-1 spark-worker-2)
 SPARK_HOME="/opt/spark"
-IVY_CACHE="/tmp/.ivy2"
+# Keep the data-quality job's Ivy metadata separate from analytics submissions.
+IVY_CACHE="/tmp/.ivy2/data-quality"
 KAFKA_CLIENT_VERSION="3.4.1"
 KAFKA_CLIENT_JAR="${SPARK_HOME}/jars/kafka-clients-${KAFKA_CLIENT_VERSION}.jar"
 KAFKA_CLIENT_URL="https://repo1.maven.org/maven2/org/apache/kafka/kafka-clients/${KAFKA_CLIENT_VERSION}/kafka-clients-${KAFKA_CLIENT_VERSION}.jar"
@@ -115,14 +116,18 @@ echo "Submitting Spark application..."
 echo ""
 
 for container in "${SPARK_CONTAINERS[@]}"; do
-    docker exec -u 0 "${container}" mkdir -p "${SPARK_HOME}/jars" "${IVY_CACHE}"
+    docker exec -u 0 "${container}" mkdir -p "${SPARK_HOME}/jars"
     docker exec -u 0 "${container}" sh -c \
         "if [ ! -f '${KAFKA_CLIENT_JAR}' ]; then curl -fsSL '${KAFKA_CLIENT_URL}' -o '${KAFKA_CLIENT_JAR}'; fi"
 done
 
+docker exec -u 0 "${SPARK_CONTAINER}" sh -c \
+    "mkdir -p '${IVY_CACHE}/cache' '${IVY_CACHE}/jars' && chown -R spark:spark '${IVY_CACHE}'"
+
 docker exec "${SPARK_CONTAINER}" \
     "${SPARK_SUBMIT}" \
     --master "${MASTER}" \
+    --conf "spark.cores.max=2" \
     --conf "spark.jars.ivy=${IVY_CACHE}" \
     --jars "${KAFKA_CLIENT_JAR}" \
     --packages "${PACKAGES}" \
