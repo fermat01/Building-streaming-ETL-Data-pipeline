@@ -39,6 +39,8 @@ SCRIPT="data_processing_spark.py"
 CONTAINER_SCRIPT="${SPARK_HOME}/work-dir/spark_app/${SCRIPT}"
 CONTAINER_CODEC="${SPARK_HOME}/work-dir/spark_app/schema_codec.py"
 CONTAINER_SCHEMA="${SPARK_HOME}/work-dir/schemas/user_event.avsc"
+CONTAINER_MONITORING="${SPARK_HOME}/work-dir/monitoring"
+CONTAINER_MONITORING_ARCHIVE="/tmp/monitoring.zip"
 
 # ============================================================
 # Dependencies
@@ -116,6 +118,12 @@ if ! docker exec "${SPARK_CONTAINER}" \
     exit 1
 fi
 
+if ! docker exec "${SPARK_CONTAINER}" \
+    test -f "${CONTAINER_MONITORING}/metrics.py"; then
+    echo "ERROR: Monitoring package is not mounted in the Spark container."
+    exit 1
+fi
+
 # A second data-quality application cannot share the processed/quarantine
 # checkpoints. Refuse duplicate submissions before they can corrupt progress.
 ACTIVE_DATA_QUALITY_APPS=$(curl -fsS http://localhost:8085/json/ | python3 -c '
@@ -152,6 +160,9 @@ done
 docker exec -u 0 "${SPARK_CONTAINER}" sh -c \
     "mkdir -p '${IVY_CACHE}/cache' '${IVY_CACHE}/jars' && chown -R spark:spark '${IVY_CACHE}'"
 
+docker exec "${SPARK_CONTAINER}" python3 -c \
+    "import shutil; shutil.make_archive('/tmp/monitoring', 'zip', '${SPARK_HOME}/work-dir', 'monitoring')"
+
 docker exec "${SPARK_CONTAINER}" \
     "${SPARK_SUBMIT}" \
     --master "${MASTER}" \
@@ -159,7 +170,7 @@ docker exec "${SPARK_CONTAINER}" \
     --conf "spark.jars.ivy=${IVY_CACHE}" \
     --jars "${KAFKA_CLIENT_JAR}" \
     --packages "${PACKAGES}" \
-    --py-files "${CONTAINER_CODEC}" \
+    --py-files "${CONTAINER_CODEC},${CONTAINER_MONITORING_ARCHIVE}" \
     --files "${CONTAINER_SCHEMA}" \
     "${CONTAINER_SCRIPT}"
 

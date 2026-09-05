@@ -186,6 +186,46 @@ The MinIO console is available at http://localhost:9001. The local contract test
 python -m unittest discover -s tests -v
 ```
 
+## Observability
+
+The local stack now includes a production-oriented observability architecture:
+
+```text
+Kafka ---------┐
+Spark ---------┤
+Airflow -------┤ -> Prometheus -> Grafana
+MinIO ---------┤
+Containers ----┘
+```
+
+Prometheus has persistent storage and scrapes Kafka Exporter, Airflow's native
+StatsD exporter, Spark Prometheus servlets, Pushgateway, cAdvisor, and MinIO's
+local metrics endpoint. Grafana has persistent storage, an automatically
+provisioned Prometheus datasource, and five focused dashboards: Pipeline
+Overview, Kafka, Spark Streaming, Data Quality, and Infrastructure.
+
+Airflow uses native StatsD metrics. Kafka Exporter uses the dedicated
+`KAFKA_MONITORING_USERNAME` identity with metadata, topic-describe, and
+group-describe ACLs; it cannot produce or consume records. Spark uses its
+native master/worker servlet plus a driver-side listener for query progress,
+failures, valid records, and quarantined records. Short-lived processes send
+custom counters to Pushgateway with bounded labels only. Metric delivery is
+best effort and never fails a pipeline task or streaming sink.
+
+Development alerts cover under-replication, offline-partition signals when
+available, Spark query failures, Airflow task failures, consumer lag above 100
+messages, unavailable targets, and container memory above 90%. These are demo
+thresholds and require calibration against a real workload. Monitoring is not
+a startup dependency of Kafka, Airflow, Spark, or MinIO, so it can be stopped
+and restarted independently.
+
+Copy the new monitoring credentials from `.env.example` into `.env` before
+starting Compose. No passwords, event fields, emails, usernames, or event IDs
+are metric labels. The current Kafka exporter does not expose broker JMX byte
+counters or controller-specific offline-partition counters; offsets, lag,
+broker visibility, and under-replication are available now. Those additional
+signals would require a separately secured JMX exporter.
+
 ## Schema Governance
 
 The pipeline uses Confluent Schema Registry as the central contract registry

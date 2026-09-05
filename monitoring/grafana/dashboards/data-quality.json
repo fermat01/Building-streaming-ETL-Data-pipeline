@@ -1,0 +1,49 @@
+{
+  "title": "Data Quality",
+  "uid": "data-quality",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "15s",
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Valid and quarantined records",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        { "expr": "streaming_events_processed_total", "legendFormat": "valid" },
+        {
+          "expr": "streaming_events_quarantined_total",
+          "legendFormat": "quarantined"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Quarantine rate",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "expr": "100 * streaming_events_quarantined_total / clamp_min(streaming_events_processed_total + streaming_events_quarantined_total, 1)",
+          "legendFormat": "percent"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Validation failures by reason",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "targets": [
+        {
+          "expr": "streaming_validation_failures_total",
+          "legendFormat": "{{reason}}"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Current quarantine total",
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 8 },
+      "targets": [{ "expr": "sum(streaming_events_quarantined_total)" }]
+    }
+  ]
+}

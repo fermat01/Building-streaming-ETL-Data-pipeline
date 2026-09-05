@@ -1,0 +1,11 @@
+apiVersion: 1
+
+providers:
+  - name: Streaming ETL
+    orgId: 1
+    folder: Streaming ETL
+    type: file
+    disableDeletion: true
+    editable: false
+    options:
+      path: /var/lib/grafana/dashboards

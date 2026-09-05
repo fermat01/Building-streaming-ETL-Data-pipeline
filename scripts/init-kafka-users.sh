@@ -14,6 +14,8 @@ set -euo pipefail
 : "${KAFKA_SCHEMA_REGISTRY_PASSWORD:?KAFKA_SCHEMA_REGISTRY_PASSWORD is required}"
 : "${KAFKA_UI_USERNAME:?KAFKA_UI_USERNAME is required}"
 : "${KAFKA_UI_PASSWORD:?KAFKA_UI_PASSWORD is required}"
+: "${KAFKA_MONITORING_USERNAME:?KAFKA_MONITORING_USERNAME is required}"
+: "${KAFKA_MONITORING_PASSWORD:?KAFKA_MONITORING_PASSWORD is required}"
 
 for attempt in $(seq 1 36); do
     if cub zk-ready zookeeper:2181 10 >/dev/null 2>&1; then
@@ -43,5 +45,27 @@ set_scram_password "${KAFKA_CONSUMER_USERNAME}" "${KAFKA_CONSUMER_PASSWORD}"
 set_scram_password "${KAFKA_CONNECT_USERNAME}" "${KAFKA_CONNECT_PASSWORD}"
 set_scram_password "${KAFKA_SCHEMA_REGISTRY_USERNAME}" "${KAFKA_SCHEMA_REGISTRY_PASSWORD}"
 set_scram_password "${KAFKA_UI_USERNAME}" "${KAFKA_UI_PASSWORD}"
+set_scram_password "${KAFKA_MONITORING_USERNAME}" "${KAFKA_MONITORING_PASSWORD}"
+
+# Kafka Exporter needs metadata, topic offsets, and consumer-group descriptions
+# only; it does not receive produce or consume permissions.
+kafka-acls \
+    --authorizer-properties zookeeper.connect=zookeeper:2181 \
+    --add \
+    --allow-principal "User:${KAFKA_MONITORING_USERNAME}" \
+    --operation Describe \
+    --cluster
+kafka-acls \
+    --authorizer-properties zookeeper.connect=zookeeper:2181 \
+    --add \
+    --allow-principal "User:${KAFKA_MONITORING_USERNAME}" \
+    --operation Describe \
+    --topic '*'
+kafka-acls \
+    --authorizer-properties zookeeper.connect=zookeeper:2181 \
+    --add \
+    --allow-principal "User:${KAFKA_MONITORING_USERNAME}" \
+    --operation Describe \
+    --group '*'
 
 echo "Kafka SCRAM credentials initialized."

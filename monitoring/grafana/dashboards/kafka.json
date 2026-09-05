@@ -1,0 +1,64 @@
+{
+  "title": "Kafka",
+  "uid": "kafka",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "15s",
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Brokers",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+      "targets": [{ "expr": "count(kafka_brokers)", "legendFormat": "brokers" }]
+    },
+    {
+      "type": "timeseries",
+      "title": "Streaming topic offsets",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+      "targets": [
+        {
+          "expr": "sum(kafka_topic_partition_current_offset{topic=\"streaming-topic\"})",
+          "legendFormat": "current offset"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Consumer lag by partition",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
+      "targets": [
+        {
+          "expr": "kafka_consumergroup_lag{consumergroup=\"spark-streaming-consumer\",topic=\"streaming-topic\"}",
+          "legendFormat": "partition {{partition}}"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Under-replicated partitions",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 12 },
+      "targets": [
+        { "expr": "sum(kafka_topic_partition_under_replicated_partition)" }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Offline partitions",
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 12 },
+      "targets": [
+        { "expr": "kafka_controller_kafkacontroller_offline_partitions_count" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Consumer group lag",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "targets": [
+        {
+          "expr": "sum by (consumergroup) (kafka_consumergroup_lag_sum)",
+          "legendFormat": "{{consumergroup}}"
+        }
+      ]
+    }
+  ]
+}

@@ -83,11 +83,19 @@ services:
     env_file:
       - .env
 
+    environment:
+      PYTHONPATH: /opt/airflow
+      AIRFLOW__METRICS__STATSD_ON: "True"
+      AIRFLOW__METRICS__STATSD_HOST: airflow-statsd-exporter
+      AIRFLOW__METRICS__STATSD_PORT: 9125
+      AIRFLOW__METRICS__STATSD_PREFIX: airflow
+
     volumes:
       - ./dags:/opt/airflow/dags
       - ./schemas:/opt/airflow/schemas:ro
       - ./logs:/opt/airflow/logs
       - ./scripts:/opt/airflow/scripts
+      - ./monitoring:/opt/airflow/monitoring:ro
 
     ports:
       - "8080:8080"
@@ -119,11 +127,19 @@ services:
     env_file:
       - .env
 
+    environment:
+      PYTHONPATH: /opt/airflow
+      AIRFLOW__METRICS__STATSD_ON: "True"
+      AIRFLOW__METRICS__STATSD_HOST: airflow-statsd-exporter
+      AIRFLOW__METRICS__STATSD_PORT: 9125
+      AIRFLOW__METRICS__STATSD_PREFIX: airflow
+
     volumes:
       - ./dags:/opt/airflow/dags
       - ./schemas:/opt/airflow/schemas:ro
       - ./logs:/opt/airflow/logs
       - ./scripts:/opt/airflow/scripts
+      - ./monitoring:/opt/airflow/monitoring:ro
 
     command:
       - scheduler
@@ -712,6 +728,7 @@ services:
     volumes:
       - ./spark_app:/opt/spark/work-dir/spark_app:ro
       - ./schemas:/opt/spark/work-dir/schemas:ro
+      - ./monitoring:/opt/spark/work-dir/monitoring:ro
 
     env_file:
       - .env
@@ -720,6 +737,8 @@ services:
       SPARK_MASTER_HOST: spark-master
       SPARK_MASTER_PORT: 7077
       SPARK_MASTER_WEBUI_PORT: 8080
+      SPARK_MASTER_OPTS: "-Dspark.metrics.conf=/opt/spark/work-dir/monitoring/spark/metrics.properties"
+      PYTHONPATH: /opt/spark/work-dir/monitoring
 
     command:
       - /opt/spark/bin/spark-class
@@ -752,10 +771,13 @@ services:
     volumes:
       - ./spark_app:/opt/spark/work-dir/spark_app:ro
       - ./schemas:/opt/spark/work-dir/schemas:ro
+      - ./monitoring:/opt/spark/work-dir/monitoring:ro
 
     environment:
       SPARK_WORKER_CORES: 2
       SPARK_WORKER_MEMORY: 2g
+      SPARK_WORKER_OPTS: "-Dspark.metrics.conf=/opt/spark/work-dir/monitoring/spark/metrics.properties"
+      PYTHONPATH: /opt/spark/work-dir/monitoring
 
     command:
       - /opt/spark/bin/spark-class
@@ -787,10 +809,13 @@ services:
     volumes:
       - ./spark_app:/opt/spark/work-dir/spark_app:ro
       - ./schemas:/opt/spark/work-dir/schemas:ro
+      - ./monitoring:/opt/spark/work-dir/monitoring:ro
 
     environment:
       SPARK_WORKER_CORES: 2
       SPARK_WORKER_MEMORY: 2g
+      SPARK_WORKER_OPTS: "-Dspark.metrics.conf=/opt/spark/work-dir/monitoring/spark/metrics.properties"
+      PYTHONPATH: /opt/spark/work-dir/monitoring
 
     command:
       - /opt/spark/bin/spark-class
@@ -800,6 +825,158 @@ services:
       - "2"
       - --memory
       - "2g"
+
+  # ============================================================
+  # Observability services
+  # ============================================================
+  kafka-exporter:
+    image: danielqsj/kafka-exporter:v1.8.0
+
+    container_name: kafka-exporter
+
+    restart: unless-stopped
+
+    env_file:
+      - .env
+
+    command:
+      - --kafka.server=broker-1:9092
+      - --kafka.server=broker-2:9093
+      - --kafka.server=broker-3:9094
+      - --sasl.enabled
+      - --sasl.username=${KAFKA_MONITORING_USERNAME}
+      - --sasl.password=${KAFKA_MONITORING_PASSWORD}
+      - --sasl.mechanism=sha256
+      - --web.listen-address=:9308
+
+    depends_on:
+      broker-1:
+        condition: service_healthy
+      broker-2:
+        condition: service_healthy
+      broker-3:
+        condition: service_healthy
+
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:9308/metrics >/dev/null"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  airflow-statsd-exporter:
+    image: prom/statsd-exporter:v0.28.0
+
+    container_name: airflow-statsd-exporter
+
+    restart: unless-stopped
+
+    command:
+      - --statsd.listen-udp=:9125
+      - --web.listen-address=:9102
+
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:9102/metrics >/dev/null"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  pushgateway:
+    image: prom/pushgateway:v1.10.0
+
+    container_name: pushgateway
+
+    restart: unless-stopped
+
+    healthcheck:
+      test:
+        ["CMD-SHELL", "wget -qO- http://localhost:9091/-/healthy >/dev/null"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.49.1
+
+    container_name: cadvisor
+
+    restart: unless-stopped
+
+    privileged: true
+
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/healthz >/dev/null"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  prometheus:
+    image: prom/prometheus:v2.55.1
+
+    container_name: prometheus
+
+    restart: unless-stopped
+
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=7d
+
+    ports:
+      - "9091:9090"
+
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus-data:/prometheus
+
+    depends_on:
+      - kafka-exporter
+      - airflow-statsd-exporter
+      - pushgateway
+
+    healthcheck:
+      test:
+        ["CMD-SHELL", "wget -qO- http://localhost:9090/-/healthy >/dev/null"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  grafana:
+    image: grafana/grafana:11.2.0
+
+    container_name: grafana
+
+    restart: unless-stopped
+
+    ports:
+      - "3000:3000"
+
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:?GRAFANA_ADMIN_USER is required}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD is required}
+
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+
+    depends_on:
+      prometheus:
+        condition: service_healthy
+
+    healthcheck:
+      test:
+        ["CMD-SHELL", "wget -qO- http://localhost:3000/api/health >/dev/null"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
 
   # ============================================================
   # MinIO
@@ -820,6 +997,7 @@ services:
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      MINIO_PROMETHEUS_AUTH_TYPE: public
 
     command:
       - server
@@ -830,6 +1008,16 @@ services:
     volumes:
       - minio-data:/data
 
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -fsS http://localhost:9000/minio/health/live >/dev/null",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
 # ==============================================================
 # Persistent Volumes
 # ==============================================================
@@ -838,6 +1026,8 @@ volumes:
   kafka2-data:
   kafka3-data:
   minio-data:
+  prometheus-data:
+  grafana-data:
 
 # ==============================================================
 # Network

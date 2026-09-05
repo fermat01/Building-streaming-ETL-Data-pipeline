@@ -26,6 +26,7 @@ from streaming_common import (
     validate_configuration,
 )
 from schema_codec import decode_confluent_payload
+from streaming_observability import StreamingMetricsListener
 
 logger = logging.getLogger("spark_data_quality")
 logging.basicConfig(
@@ -88,8 +89,10 @@ def parse_and_validate(stream: DataFrame) -> tuple[DataFrame, DataFrame]:
 
 
 def write_streams(valid: DataFrame, invalid: DataFrame) -> None:
+    valid.sparkSession.streams.addListener(StreamingMetricsListener())
     valid_query = (
         valid.writeStream.format("parquet")
+        .queryName("data_quality_valid")
         .outputMode("append")
         .option("path", PROCESSED_PATH)
         .option("checkpointLocation", f"{CHECKPOINT_ROOT}/processed")
@@ -101,6 +104,7 @@ def write_streams(valid: DataFrame, invalid: DataFrame) -> None:
     )
     quarantine_query = (
         invalid.writeStream.format("parquet")
+        .queryName("data_quality_quarantine")
         .outputMode("append")
         .option("path", QUARANTINE_PATH)
         .option("checkpointLocation", f"{CHECKPOINT_ROOT}/quarantine")

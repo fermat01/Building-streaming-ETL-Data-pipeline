@@ -12,6 +12,8 @@ from airflow import DAG
 from airflow.operators.python import PythonOperator
 from confluent_kafka import Producer
 
+from monitoring.metrics import Metric, push_metrics
+
 # Constants and configuration
 logger = logging.getLogger(__name__)
 
@@ -38,6 +40,9 @@ SCHEMA_PATH = Path(
         str(Path(__file__).parents[1] / "schemas" / "user_event.avsc"),
     )
 )
+
+published_events = 0
+producer_errors = 0
 
 
 def get_user_data(url: str = API_ENDPOINT) -> dict:
@@ -160,9 +165,12 @@ def publish_to_kafka(producer: Producer, topic: str, data: dict, serializer) -> 
 
 def delivery_status(err, msg) -> None:
     """Reports the delivery status of the message to Kafka."""
+    global published_events, producer_errors
     if err is not None:
+        producer_errors += 1
         logger.error("Kafka message delivery failed: %s", err)
     else:
+        published_events += 1
         logger.info(
             "Kafka message delivered topic=%s partition=%s offset=%s",
             msg.topic(),
@@ -190,6 +198,13 @@ def initiate_stream():
         )
         time.sleep(PAUSE_INTERVAL)
     kafka_producer.flush(30)
+    push_metrics(
+        "airflow-producer",
+        [
+            Metric("streaming_events_produced_total", "counter", published_events),
+            Metric("streaming_producer_errors_total", "counter", producer_errors),
+        ],
+    )
 
 
 if __name__ == "__main__":

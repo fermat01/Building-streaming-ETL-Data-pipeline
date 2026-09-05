@@ -21,6 +21,7 @@ from streaming_common import (
     create_spark_session,
     validate_configuration,
 )
+from streaming_observability import StreamingMetricsListener
 
 logger = logging.getLogger("spark_streaming_analytics")
 logging.basicConfig(
@@ -101,9 +102,11 @@ def main() -> None:
     validate_configuration()
     spark = create_spark_session("SparkStructuredStreamingAnalytics")
     try:
+        spark.streams.addListener(StreamingMetricsListener())
         query = (
             analytics_stream(spark)
             .writeStream.format("parquet")
+            .queryName("analytics")
             .outputMode("append")
             .option("path", ANALYTICS_PATH)
             .option("checkpointLocation", f"{CHECKPOINT_ROOT}/analytics")

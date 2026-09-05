@@ -1,5 +1,6 @@
 confluent-kafka[avro]==2.5.3
 requests
 json5
-pyspark 
+pyspark
+statsd==4.0.1
 

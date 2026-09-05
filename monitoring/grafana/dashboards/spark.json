@@ -1,0 +1,65 @@
+{
+  "title": "Spark Streaming",
+  "uid": "spark-streaming",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "15s",
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Active queries",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+      "targets": [{ "expr": "sum(spark_query_active)" }]
+    },
+    {
+      "type": "timeseries",
+      "title": "Input rows per second",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+      "targets": [
+        {
+          "expr": "spark_query_input_rate_rows_per_second",
+          "legendFormat": "{{query}}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Processing rows per second",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
+      "targets": [
+        {
+          "expr": "spark_query_processing_rate_rows_per_second",
+          "legendFormat": "{{query}}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Batch duration",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 },
+      "targets": [
+        {
+          "expr": "spark_query_batch_duration_seconds",
+          "legendFormat": "{{query}}"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Failed queries",
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 12 },
+      "targets": [{ "expr": "sum(spark_query_failed)" }]
+    },
+    {
+      "type": "timeseries",
+      "title": "Records by query",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+      "targets": [
+        {
+          "expr": "spark_query_processed_records_total",
+          "legendFormat": "processed {{query}}"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,73 @@
+{
+  "title": "Pipeline Overview",
+  "uid": "pipeline-overview",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "15s",
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Monitored targets up",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+      "targets": [{ "expr": "sum(up)" }]
+    },
+    {
+      "type": "timeseries",
+      "title": "Kafka records in/out",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+      "targets": [
+        {
+          "expr": "sum(rate(kafka_topic_partition_current_offset{topic=\"streaming-topic\"}[5m]))",
+          "legendFormat": "records in"
+        },
+        {
+          "expr": "sum(rate(kafka_consumergroup_current_offset{topic=\"streaming-topic\"}[5m]))",
+          "legendFormat": "records consumed"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Consumer lag",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
+      "targets": [
+        {
+          "expr": "sum(kafka_consumergroup_lag{consumergroup=\"spark-streaming-consumer\"})",
+          "legendFormat": "lag"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Spark processing rate",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 },
+      "targets": [
+        {
+          "expr": "spark_query_processing_rate_rows_per_second",
+          "legendFormat": "{{query}}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Processed and quarantined records",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
+      "targets": [
+        {
+          "expr": "streaming_events_processed_total",
+          "legendFormat": "processed"
+        },
+        {
+          "expr": "streaming_events_quarantined_total",
+          "legendFormat": "quarantined"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Airflow task failures (15m)",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 20 },
+      "targets": [{ "expr": "sum(increase(airflow_ti_failures_total[15m]))" }]
+    }
+  ]
+}
