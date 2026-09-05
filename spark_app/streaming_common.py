@@ -22,6 +22,13 @@ KAFKA_BOOTSTRAP_SERVERS = os.getenv(
     "broker-1:9092,broker-2:9093,broker-3:9094",
 )
 KAFKA_TOPIC = os.getenv("KAFKA_TOPIC", "streaming-topic")
+KAFKA_SECURITY_PROTOCOL = os.getenv("KAFKA_SECURITY_PROTOCOL", "SASL_PLAINTEXT")
+KAFKA_SASL_MECHANISM = os.getenv("KAFKA_SASL_MECHANISM", "SCRAM-SHA-256")
+KAFKA_CONSUMER_USERNAME = os.getenv("KAFKA_CONSUMER_USERNAME")
+KAFKA_CONSUMER_PASSWORD = os.getenv("KAFKA_CONSUMER_PASSWORD")
+KAFKA_CONSUMER_GROUP_ID = os.getenv(
+    "KAFKA_CONSUMER_GROUP_ID", "spark-streaming-consumer"
+)
 PROCESSED_PATH = os.getenv("MINIO_OUTPUT_PATH", "s3a://streaming-data/processed/")
 QUARANTINE_PATH = os.getenv("MINIO_QUARANTINE_PATH", "s3a://streaming-data/quarantine/")
 ANALYTICS_PATH = os.getenv("MINIO_ANALYTICS_PATH", "s3a://streaming-data/analytics/")
@@ -63,6 +70,8 @@ def validate_configuration() -> None:
             "MINIO_ROOT_USER": MINIO_ACCESS_KEY,
             "MINIO_ROOT_PASSWORD": MINIO_SECRET_KEY,
             "KAFKA_BOOTSTRAP_SERVERS": KAFKA_BOOTSTRAP_SERVERS,
+            "KAFKA_CONSUMER_USERNAME": KAFKA_CONSUMER_USERNAME,
+            "KAFKA_CONSUMER_PASSWORD": KAFKA_CONSUMER_PASSWORD,
         }.items()
         if not value
     ]
@@ -95,6 +104,15 @@ def kafka_stream(spark: SparkSession) -> DataFrame:
     return (
         spark.readStream.format("kafka")
         .option("kafka.bootstrap.servers", KAFKA_BOOTSTRAP_SERVERS)
+        .option("kafka.security.protocol", KAFKA_SECURITY_PROTOCOL)
+        .option("kafka.sasl.mechanism", KAFKA_SASL_MECHANISM)
+        .option(
+            "kafka.sasl.jaas.config",
+            "org.apache.kafka.common.security.scram.ScramLoginModule required "
+            f'username="{KAFKA_CONSUMER_USERNAME}" '
+            f'password="{KAFKA_CONSUMER_PASSWORD}";',
+        )
+        .option("kafka.group.id", KAFKA_CONSUMER_GROUP_ID)
         .option("subscribe", KAFKA_TOPIC)
         .option("startingOffsets", "earliest")
         .option("failOnDataLoss", "false")

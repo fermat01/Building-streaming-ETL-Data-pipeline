@@ -12,6 +12,23 @@ class PipelineContractTests(unittest.TestCase):
         self.assertIn('"enable.idempotence": True', source)
         self.assertIn('"retries": 5', source)
         self.assertIn("timeout=API_TIMEOUT_SECONDS", source)
+        self.assertIn('"security.protocol": KAFKA_SECURITY_PROTOCOL', source)
+        self.assertIn('"sasl.mechanisms": KAFKA_SASL_MECHANISM', source)
+        self.assertIn('"sasl.username": producer_username', source)
+
+    def test_kafka_security_contract_is_externalized(self):
+        compose = (ROOT / "docker-compose.yml").read_text()
+        env_example = (ROOT / ".env.example").read_text()
+        self.assertIn("INTERNAL:SASL_PLAINTEXT,EXTERNAL:SASL_PLAINTEXT", compose)
+        self.assertIn("KAFKA_AUTHORIZER_CLASS_NAME", compose)
+        self.assertIn('KAFKA_ALLOW_EVERYONE_IF_NO_ACL_FOUND: "false"', compose)
+        self.assertIn(
+            "kafka.sasl.jaas.config",
+            (ROOT / "spark_app/streaming_common.py").read_text(),
+        )
+        self.assertIn("KAFKA_CONSUMER_GROUP_ID", env_example)
+        self.assertNotIn("KafkaAdminLocal2026!", env_example)
+        self.assertNotIn("AirflowProducerLocal2026!", env_example)
 
     def test_spark_jobs_are_parseable_and_distributed(self):
         for relative_path in (

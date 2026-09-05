@@ -83,7 +83,13 @@ class StreamingDataUnitTests(unittest.TestCase):
     def test_configure_kafka_enables_reliable_delivery(self):
         producer = object()
 
-        with patch.object(streaming_data, "Producer", return_value=producer) as factory:
+        with patch.dict(
+            "os.environ",
+            {
+                "KAFKA_PRODUCER_USERNAME": "producer",
+                "KAFKA_PRODUCER_PASSWORD": "producer-password",
+            },
+        ), patch.object(streaming_data, "Producer", return_value=producer) as factory:
             result = streaming_data.configure_kafka(["broker:9092"])
 
         self.assertIs(result, producer)
@@ -92,6 +98,16 @@ class StreamingDataUnitTests(unittest.TestCase):
         self.assertEqual(settings["acks"], "all")
         self.assertTrue(settings["enable.idempotence"])
         self.assertEqual(settings["retries"], 5)
+        self.assertEqual(settings["security.protocol"], "SASL_PLAINTEXT")
+        self.assertEqual(settings["sasl.mechanisms"], "SCRAM-SHA-256")
+        self.assertEqual(settings["sasl.username"], "producer")
+
+    def test_configure_kafka_requires_credentials(self):
+        with patch.object(
+            streaming_data, "KAFKA_PRODUCER_USERNAME", None
+        ), patch.object(streaming_data, "KAFKA_PRODUCER_PASSWORD", None):
+            with self.assertRaisesRegex(ValueError, "KAFKA_PRODUCER_USERNAME"):
+                streaming_data.configure_kafka(["broker:9092"])
 
 
 if __name__ == "__main__":

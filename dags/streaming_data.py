@@ -24,6 +24,10 @@ KAFKA_TOPIC = os.getenv("KAFKA_TOPIC", "streaming-topic")
 PAUSE_INTERVAL = int(os.getenv("API_POLL_INTERVAL_SECONDS", "10"))
 STREAMING_DURATION = int(os.getenv("STREAMING_DURATION_SECONDS", "120"))
 API_TIMEOUT_SECONDS = int(os.getenv("RANDOM_USER_API_TIMEOUT_SECONDS", "15"))
+KAFKA_SECURITY_PROTOCOL = os.getenv("KAFKA_SECURITY_PROTOCOL", "SASL_PLAINTEXT")
+KAFKA_SASL_MECHANISM = os.getenv("KAFKA_SASL_MECHANISM", "SCRAM-SHA-256")
+KAFKA_PRODUCER_USERNAME = os.getenv("KAFKA_PRODUCER_USERNAME")
+KAFKA_PRODUCER_PASSWORD = os.getenv("KAFKA_PRODUCER_PASSWORD")
 
 
 def get_user_data(url: str = API_ENDPOINT) -> dict:
@@ -66,9 +70,26 @@ def encrypt_zip(zip_code: object) -> str:
 
 def configure_kafka(servers: List[str] = KAFKA_BOOTSTRAP_SERVERS) -> Producer:
     """Create a reliable, idempotent producer for the Kafka cluster."""
+    producer_username = os.getenv("KAFKA_PRODUCER_USERNAME", KAFKA_PRODUCER_USERNAME)
+    producer_password = os.getenv("KAFKA_PRODUCER_PASSWORD", KAFKA_PRODUCER_PASSWORD)
+    missing = [
+        name
+        for name, value in {
+            "KAFKA_PRODUCER_USERNAME": producer_username,
+            "KAFKA_PRODUCER_PASSWORD": producer_password,
+        }.items()
+        if not value
+    ]
+    if missing:
+        raise ValueError("Missing required Kafka configuration: " + ", ".join(missing))
+
     settings = {
         "bootstrap.servers": ",".join(servers),
         "client.id": "random-user-api-producer",
+        "security.protocol": KAFKA_SECURITY_PROTOCOL,
+        "sasl.mechanisms": KAFKA_SASL_MECHANISM,
+        "sasl.username": producer_username,
+        "sasl.password": producer_password,
         "acks": "all",
         "enable.idempotence": True,
         "retries": 5,

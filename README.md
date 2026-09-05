@@ -109,14 +109,14 @@ docker compose up -d spark-master spark-worker-1 spark-worker-2
 
 <ol>
 <li>
-Access airflow UI at <a href="http://localhost:8080 ">http://localhost:8080</a> using given credentials username: $\color{orange}{airflow01}$  and password: $\color{orange}{airflow01}$
+Access airflow UI at <a href="http://localhost:8080 ">http://localhost:8080</a> using the values of `AIRFLOW_ADMIN_USERNAME` and `AIRFLOW_ADMIN_PASSWORD` from `.env`.
 
 <br><br>
 <img src="images/airflow-ui.gif" >
 
 <li/>
 </l>
-Access the Kafka UI at <a href="http://localhost:8888 ">http://localhost:8888</a> and  create topic name it $\color{orange}{streaming-topic}$  with number of partitions: $\color{orange}{6}$
+Access the Kafka UI at <a href="http://localhost:8888 ">http://localhost:8888</a>. The secured `streaming-topic` is initialized with three partitions and replication factor three.
 
 <br><br>
 <img src="images/kafka-ui.gif" >
@@ -124,7 +124,7 @@ Access the Kafka UI at <a href="http://localhost:8888 ">http://localhost:8888</a
 </li>
 
 <li>
- Acess Minio  UI using <a href="http://127.0.0.1:9001">http://127.0.0.1:9001</a> and with  credentials username: $\color{orange}{MINIOAIRFLOW01}$ and password:  $\color{orange}{ AIRFLOW123 }$ 
+ Acess Minio UI using <a href="http://127.0.0.1:9001">http://127.0.0.1:9001</a> and the `MINIO_ROOT_USER` and `MINIO_ROOT_PASSWORD` values from `.env`.
 </li>
 
 <br><br>
@@ -168,10 +168,8 @@ The analytics job reads validated Parquet as a streaming source and writes one-m
 ### Verify the pipeline
 
 ```bash
-# Inspect Kafka events from inside broker 1
-docker exec -it broker-1 kafka-console-consumer \
-  --bootstrap-server broker-1:9092 --topic streaming-topic \
-  --from-beginning --max-messages 3
+# Inspect Kafka events in Kafka UI, or use a Kafka client configured with
+# KAFKA_CONSUMER_USERNAME and KAFKA_CONSUMER_PASSWORD from `.env`.
 
 # Inspect Spark applications and worker registration
 curl http://localhost:8085/json/
@@ -214,7 +212,35 @@ Container Registry. The local Compose stack remains the deployment target for
 development; production deployment requires a configured server or
 orchestration platform to pull those images.
 
-## 6. Conclusion
+## 6. Security
+
+Kafka client listeners use SASL/SCRAM-SHA-256 over the local Docker network and
+the localhost development listeners. Anonymous Kafka access is disabled. The
+Airflow producer, Spark consumer, Kafka Connect worker, Schema Registry, and
+Kafka UI each use separate credentials provisioned by the idempotent Kafka
+initialization services.
+
+Kafka ACLs follow least privilege: Airflow can write to `streaming-topic`,
+Spark can read that topic and its consumer group, Connect owns its internal
+topics, Schema Registry owns `_schemas`, and Kafka UI has read-only topic
+access. Administrative topic and ACL operations require the Kafka admin
+identity. Topic replication remains three with `min.insync.replicas=2`.
+
+Copy `.env.example` to `.env` and replace every `<CHANGE_ME>` value with a
+local development value before running Compose. `.env` is ignored by Git;
+`.env.example` contains placeholders only. This is a security-hardened local
+Docker Compose architecture, not a production security boundary: it uses
+SASL_PLAINTEXT rather than TLS and stores local credentials in the developer's
+environment file.
+
+## 7. Future Improvements
+
+- Add TLS certificates for Kafka and service-to-service traffic.
+- Move local secrets to a dedicated secret manager for non-development deployments.
+- Add integration tests that exercise authenticated clients and broker restart recovery.
+- Replace ad hoc local Spark dependency downloads with pinned, verified artifacts.
+
+## 8. Conclusion
 
 This project successfully demonstrates the construction of a real-time ETL (Extract, Transform, Load) data pipeline using Apache Kafka for data ingestion, Apache Spark for data processing, and Minio S3 bucket for data storage. By leveraging open APIs, we were able to ingest real-time data, process and transform it efficiently, and load it into a robust storage system for further analysis.
 The use of Apache Kafka provided a scalable and fault-tolerant platform for data ingestion, ensuring that data streams were handled effectively. Apache Spark enabled real-time data processing and transformation, offering powerful capabilities for handling large datasets with low latency. Finally, Minio S3 object storage served as a reliable and scalable storage solution, allowing for seamless integration with various analytics tools.

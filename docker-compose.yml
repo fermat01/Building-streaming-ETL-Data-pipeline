@@ -9,13 +9,16 @@ services:
 
     restart: unless-stopped
 
+    env_file:
+      - .env
+
     environment:
-      POSTGRES_USER: airflow
-      POSTGRES_PASSWORD: airflow
-      POSTGRES_DB: airflowdb
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
 
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U airflow -d airflowdb"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -154,6 +157,27 @@ services:
       ZOOKEEPER_TICK_TIME: 2000
 
   # ============================================================
+  # Kafka SCRAM credential bootstrap
+  # ============================================================
+  kafka-credentials-init:
+    image: confluentinc/cp-kafka:7.7.0
+
+    container_name: kafka-credentials-init
+
+    depends_on:
+      - zookeeper
+
+    env_file:
+      - .env
+
+    volumes:
+      - ./scripts:/opt/kafka-scripts:ro
+
+    command:
+      - bash
+      - /opt/kafka-scripts/init-kafka-users.sh
+
+  # ============================================================
   # Kafka Broker 1
   # ============================================================
   broker-1:
@@ -166,7 +190,10 @@ services:
     restart: unless-stopped
 
     depends_on:
-      - zookeeper
+      zookeeper:
+        condition: service_started
+      kafka-credentials-init:
+        condition: service_completed_successfully
 
     ports:
       - "19092:19092"
@@ -177,6 +204,9 @@ services:
       # --------------------------------------------------------
       KAFKA_BROKER_ID: 1
 
+      KAFKA_ADMIN_USERNAME: ${KAFKA_ADMIN_USERNAME}
+      KAFKA_ADMIN_PASSWORD: ${KAFKA_ADMIN_PASSWORD}
+
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
 
       # --------------------------------------------------------
@@ -186,9 +216,21 @@ services:
 
       KAFKA_ADVERTISED_LISTENERS: "INTERNAL://broker-1:9092,EXTERNAL://localhost:19092"
 
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT"
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "INTERNAL:SASL_PLAINTEXT,EXTERNAL:SASL_PLAINTEXT"
 
       KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+
+      KAFKA_SASL_ENABLED_MECHANISMS: SCRAM-SHA-256
+      KAFKA_SASL_MECHANISM_INTER_BROKER_PROTOCOL: SCRAM-SHA-256
+      KAFKA_LISTENER_NAME_INTERNAL_SCRAM___SHA___256_SASL_JAAS_CONFIG: >-
+        org.apache.kafka.common.security.scram.ScramLoginModule required
+        username="${KAFKA_ADMIN_USERNAME}" password="${KAFKA_ADMIN_PASSWORD}";
+      KAFKA_LISTENER_NAME_EXTERNAL_SCRAM___SHA___256_SASL_JAAS_CONFIG: >-
+        org.apache.kafka.common.security.scram.ScramLoginModule required
+        username="${KAFKA_ADMIN_USERNAME}" password="${KAFKA_ADMIN_PASSWORD}";
+      KAFKA_AUTHORIZER_CLASS_NAME: kafka.security.authorizer.AclAuthorizer
+      KAFKA_ALLOW_EVERYONE_IF_NO_ACL_FOUND: "false"
+      KAFKA_SUPER_USERS: User:${KAFKA_ADMIN_USERNAME}
 
       # --------------------------------------------------------
       # Reliability
@@ -220,7 +262,7 @@ services:
       test:
         [
           "CMD-SHELL",
-          "kafka-broker-api-versions --bootstrap-server localhost:9092 >/dev/null 2>&1",
+          "printf '%s\\n' 'security.protocol=SASL_PLAINTEXT' 'sasl.mechanism=SCRAM-SHA-256' 'sasl.jaas.config=org.apache.kafka.common.security.scram.ScramLoginModule required username=\"'\"$${KAFKA_ADMIN_USERNAME}\"'\" password=\"'\"$${KAFKA_ADMIN_PASSWORD}\"'\";' > /tmp/health.properties && kafka-broker-api-versions --bootstrap-server localhost:9092 --command-config /tmp/health.properties >/dev/null 2>&1",
         ]
       interval: 10s
       timeout: 10s
@@ -243,7 +285,10 @@ services:
     restart: unless-stopped
 
     depends_on:
-      - zookeeper
+      zookeeper:
+        condition: service_started
+      kafka-credentials-init:
+        condition: service_completed_successfully
 
     ports:
       - "19093:19093"
@@ -254,6 +299,9 @@ services:
       # --------------------------------------------------------
       KAFKA_BROKER_ID: 2
 
+      KAFKA_ADMIN_USERNAME: ${KAFKA_ADMIN_USERNAME}
+      KAFKA_ADMIN_PASSWORD: ${KAFKA_ADMIN_PASSWORD}
+
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
 
       # --------------------------------------------------------
@@ -263,9 +311,21 @@ services:
 
       KAFKA_ADVERTISED_LISTENERS: "INTERNAL://broker-2:9093,EXTERNAL://localhost:19093"
 
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT"
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "INTERNAL:SASL_PLAINTEXT,EXTERNAL:SASL_PLAINTEXT"
 
       KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+
+      KAFKA_SASL_ENABLED_MECHANISMS: SCRAM-SHA-256
+      KAFKA_SASL_MECHANISM_INTER_BROKER_PROTOCOL: SCRAM-SHA-256
+      KAFKA_LISTENER_NAME_INTERNAL_SCRAM___SHA___256_SASL_JAAS_CONFIG: >-
+        org.apache.kafka.common.security.scram.ScramLoginModule required
+        username="${KAFKA_ADMIN_USERNAME}" password="${KAFKA_ADMIN_PASSWORD}";
+      KAFKA_LISTENER_NAME_EXTERNAL_SCRAM___SHA___256_SASL_JAAS_CONFIG: >-
+        org.apache.kafka.common.security.scram.ScramLoginModule required
+        username="${KAFKA_ADMIN_USERNAME}" password="${KAFKA_ADMIN_PASSWORD}";
+      KAFKA_AUTHORIZER_CLASS_NAME: kafka.security.authorizer.AclAuthorizer
+      KAFKA_ALLOW_EVERYONE_IF_NO_ACL_FOUND: "false"
+      KAFKA_SUPER_USERS: User:${KAFKA_ADMIN_USERNAME}
 
       # --------------------------------------------------------
       # Reliability
@@ -297,7 +357,7 @@ services:
       test:
         [
           "CMD-SHELL",
-          "kafka-broker-api-versions --bootstrap-server localhost:9093 >/dev/null 2>&1",
+          "printf '%s\\n' 'security.protocol=SASL_PLAINTEXT' 'sasl.mechanism=SCRAM-SHA-256' 'sasl.jaas.config=org.apache.kafka.common.security.scram.ScramLoginModule required username=\"'\"$${KAFKA_ADMIN_USERNAME}\"'\" password=\"'\"$${KAFKA_ADMIN_PASSWORD}\"'\";' > /tmp/health.properties && kafka-broker-api-versions --bootstrap-server localhost:9093 --command-config /tmp/health.properties >/dev/null 2>&1",
         ]
       interval: 10s
       timeout: 10s
@@ -320,7 +380,10 @@ services:
     restart: unless-stopped
 
     depends_on:
-      - zookeeper
+      zookeeper:
+        condition: service_started
+      kafka-credentials-init:
+        condition: service_completed_successfully
 
     ports:
       - "19094:19094"
@@ -331,6 +394,9 @@ services:
       # --------------------------------------------------------
       KAFKA_BROKER_ID: 3
 
+      KAFKA_ADMIN_USERNAME: ${KAFKA_ADMIN_USERNAME}
+      KAFKA_ADMIN_PASSWORD: ${KAFKA_ADMIN_PASSWORD}
+
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
 
       # --------------------------------------------------------
@@ -340,9 +406,21 @@ services:
 
       KAFKA_ADVERTISED_LISTENERS: "INTERNAL://broker-3:9094,EXTERNAL://localhost:19094"
 
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT"
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "INTERNAL:SASL_PLAINTEXT,EXTERNAL:SASL_PLAINTEXT"
 
       KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+
+      KAFKA_SASL_ENABLED_MECHANISMS: SCRAM-SHA-256
+      KAFKA_SASL_MECHANISM_INTER_BROKER_PROTOCOL: SCRAM-SHA-256
+      KAFKA_LISTENER_NAME_INTERNAL_SCRAM___SHA___256_SASL_JAAS_CONFIG: >-
+        org.apache.kafka.common.security.scram.ScramLoginModule required
+        username="${KAFKA_ADMIN_USERNAME}" password="${KAFKA_ADMIN_PASSWORD}";
+      KAFKA_LISTENER_NAME_EXTERNAL_SCRAM___SHA___256_SASL_JAAS_CONFIG: >-
+        org.apache.kafka.common.security.scram.ScramLoginModule required
+        username="${KAFKA_ADMIN_USERNAME}" password="${KAFKA_ADMIN_PASSWORD}";
+      KAFKA_AUTHORIZER_CLASS_NAME: kafka.security.authorizer.AclAuthorizer
+      KAFKA_ALLOW_EVERYONE_IF_NO_ACL_FOUND: "false"
+      KAFKA_SUPER_USERS: User:${KAFKA_ADMIN_USERNAME}
 
       # --------------------------------------------------------
       # Reliability
@@ -374,7 +452,7 @@ services:
       test:
         [
           "CMD-SHELL",
-          "kafka-broker-api-versions --bootstrap-server localhost:9094 >/dev/null 2>&1",
+          "printf '%s\\n' 'security.protocol=SASL_PLAINTEXT' 'sasl.mechanism=SCRAM-SHA-256' 'sasl.jaas.config=org.apache.kafka.common.security.scram.ScramLoginModule required username=\"'\"$${KAFKA_ADMIN_USERNAME}\"'\" password=\"'\"$${KAFKA_ADMIN_PASSWORD}\"'\";' > /tmp/health.properties && kafka-broker-api-versions --bootstrap-server localhost:9094 --command-config /tmp/health.properties >/dev/null 2>&1",
         ]
       interval: 10s
       timeout: 10s
@@ -408,120 +486,15 @@ services:
       broker-3:
         condition: service_healthy
 
+    env_file:
+      - .env
+
+    volumes:
+      - ./scripts:/opt/kafka-scripts:ro
+
     command:
       - bash
-      - -c
-      - |
-        set -e
-
-        echo "=============================================="
-        echo "Waiting for Kafka cluster..."
-        echo "=============================================="
-
-        echo "Waiting for all Kafka brokers to become ready..."
-        kafka_ready=false
-        for attempt in $$(seq 1 36); do
-          if cub kafka-ready \
-              -b broker-1:9092,broker-2:9093,broker-3:9094 \
-              3 \
-              10; then
-            kafka_ready=true
-            break
-          fi
-          echo "Kafka is not ready yet (attempt $${attempt}/36)."
-          sleep 5
-        done
-
-        if [ "$${kafka_ready}" != "true" ]; then
-          echo "ERROR: Kafka did not become ready within three minutes."
-          exit 1
-        fi
-
-        echo ""
-        echo "Kafka cluster is ready."
-        echo ""
-
-        echo "=============================================="
-        echo "Creating application topic"
-        echo "=============================================="
-
-        kafka-topics \
-          --bootstrap-server broker-1:9092 \
-          --create \
-          --if-not-exists \
-          --topic streaming-topic \
-          --partitions 3 \
-          --replication-factor 3 \
-          --config min.insync.replicas=2 \
-          --config cleanup.policy=delete \
-          --config retention.ms=604800000
-
-        echo ""
-        echo "=============================================="
-        echo "Creating Kafka Connect internal topics"
-        echo "=============================================="
-
-        kafka-topics \
-          --bootstrap-server broker-1:9092 \
-          --create \
-          --if-not-exists \
-          --topic docker-connect-configs \
-          --partitions 1 \
-          --replication-factor 3 \
-          --config cleanup.policy=compact
-
-        kafka-topics \
-          --bootstrap-server broker-1:9092 \
-          --create \
-          --if-not-exists \
-          --topic docker-connect-offsets \
-          --partitions 25 \
-          --replication-factor 3 \
-          --config cleanup.policy=compact
-
-        kafka-topics \
-          --bootstrap-server broker-1:9092 \
-          --create \
-          --if-not-exists \
-          --topic docker-connect-status \
-          --partitions 5 \
-          --replication-factor 3 \
-          --config cleanup.policy=compact
-
-        echo ""
-        echo "=============================================="
-        echo "Kafka topics"
-        echo "=============================================="
-
-        kafka-topics \
-          --bootstrap-server broker-1:9092 \
-          --describe \
-          --topic streaming-topic
-
-        echo ""
-        echo "=============================================="
-        echo "Kafka Connect internal topics"
-        echo "=============================================="
-
-        kafka-topics \
-          --bootstrap-server broker-1:9092 \
-          --describe \
-          --topic docker-connect-configs
-
-        kafka-topics \
-          --bootstrap-server broker-1:9092 \
-          --describe \
-          --topic docker-connect-offsets
-
-        kafka-topics \
-          --bootstrap-server broker-1:9092 \
-          --describe \
-          --topic docker-connect-status
-
-        echo ""
-        echo "=============================================="
-        echo "Kafka initialization completed successfully."
-        echo "=============================================="
+      - /opt/kafka-scripts/init-kafka.sh
 
   # ============================================================
   # Schema Registry
@@ -542,10 +515,18 @@ services:
     ports:
       - "8081:8081"
 
+    env_file:
+      - .env
+
     environment:
       SCHEMA_REGISTRY_HOST_NAME: schema_registry
 
-      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: "PLAINTEXT://broker-1:9092,PLAINTEXT://broker-2:9093,PLAINTEXT://broker-3:9094"
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: "SASL_PLAINTEXT://broker-1:9092,SASL_PLAINTEXT://broker-2:9093,SASL_PLAINTEXT://broker-3:9094"
+      SCHEMA_REGISTRY_KAFKASTORE_SECURITY_PROTOCOL: SASL_PLAINTEXT
+      SCHEMA_REGISTRY_KAFKASTORE_SASL_MECHANISM: SCRAM-SHA-256
+      SCHEMA_REGISTRY_KAFKASTORE_SASL_JAAS_CONFIG: >-
+        org.apache.kafka.common.security.scram.ScramLoginModule required
+        username="${KAFKA_SCHEMA_REGISTRY_USERNAME}" password="${KAFKA_SCHEMA_REGISTRY_PASSWORD}";
 
       SCHEMA_REGISTRY_LISTENERS: "http://0.0.0.0:8081"
 
@@ -571,11 +552,29 @@ services:
     ports:
       - "8083:8083"
 
+    env_file:
+      - .env
+
     environment:
       # --------------------------------------------------------
       # Kafka cluster
       # --------------------------------------------------------
       CONNECT_BOOTSTRAP_SERVERS: "broker-1:9092,broker-2:9093,broker-3:9094"
+      CONNECT_SECURITY_PROTOCOL: SASL_PLAINTEXT
+      CONNECT_SASL_MECHANISM: SCRAM-SHA-256
+      CONNECT_SASL_JAAS_CONFIG: >-
+        org.apache.kafka.common.security.scram.ScramLoginModule required
+        username="${KAFKA_CONNECT_USERNAME}" password="${KAFKA_CONNECT_PASSWORD}";
+      CONNECT_PRODUCER_SECURITY_PROTOCOL: SASL_PLAINTEXT
+      CONNECT_PRODUCER_SASL_MECHANISM: SCRAM-SHA-256
+      CONNECT_PRODUCER_SASL_JAAS_CONFIG: >-
+        org.apache.kafka.common.security.scram.ScramLoginModule required
+        username="${KAFKA_CONNECT_USERNAME}" password="${KAFKA_CONNECT_PASSWORD}";
+      CONNECT_CONSUMER_SECURITY_PROTOCOL: SASL_PLAINTEXT
+      CONNECT_CONSUMER_SASL_MECHANISM: SCRAM-SHA-256
+      CONNECT_CONSUMER_SASL_JAAS_CONFIG: >-
+        org.apache.kafka.common.security.scram.ScramLoginModule required
+        username="${KAFKA_CONNECT_USERNAME}" password="${KAFKA_CONNECT_PASSWORD}";
 
       # --------------------------------------------------------
       # Kafka Connect worker
@@ -655,10 +654,18 @@ services:
     ports:
       - "8888:8080"
 
+    env_file:
+      - .env
+
     environment:
       KAFKA_CLUSTERS_0_NAME: local
 
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: "broker-1:9092,broker-2:9093,broker-3:9094"
+      KAFKA_CLUSTERS_0_PROPERTIES_SECURITY_PROTOCOL: SASL_PLAINTEXT
+      KAFKA_CLUSTERS_0_PROPERTIES_SASL_MECHANISM: SCRAM-SHA-256
+      KAFKA_CLUSTERS_0_PROPERTIES_SASL_JAAS_CONFIG: >-
+        org.apache.kafka.common.security.scram.ScramLoginModule required
+        username="${KAFKA_UI_USERNAME}" password="${KAFKA_UI_PASSWORD}";
 
       KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
 
