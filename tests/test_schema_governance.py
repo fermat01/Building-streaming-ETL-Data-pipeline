@@ -12,7 +12,7 @@ SPARK_APP = ROOT / "spark_app"
 if str(SPARK_APP) not in sys.path:
     sys.path.insert(0, str(SPARK_APP))
 
-from schema_codec import decode_confluent_payload
+from schema_codec import decode_confluent_payload  # noqa: E402
 
 
 class SchemaContractTests(unittest.TestCase):
@@ -34,10 +34,12 @@ class SchemaContractTests(unittest.TestCase):
 
     @unittest.skipUnless(
         __import__("importlib.util").util.find_spec("fastavro"),
-        "fastavro is installed in the Spark image, not the lightweight unit-test environment",
+        "fastavro is installed in the Spark image, "
+        "not the lightweight unit-test environment",
     )
     def test_avro_wire_payload_round_trips_to_logical_json(self):
         import io
+
         from fastavro import parse_schema, schemaless_writer
 
         schema = parse_schema(json.loads(SCHEMA_PATH.read_text()))

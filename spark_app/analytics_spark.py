@@ -13,7 +13,6 @@ from pyspark.sql.types import (
     StructType,
     TimestampType,
 )
-
 from streaming_common import (
     ANALYTICS_PATH,
     CHECKPOINT_ROOT,

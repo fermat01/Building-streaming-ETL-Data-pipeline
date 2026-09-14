@@ -2,8 +2,8 @@
 
 import logging
 import os
-from dataclasses import dataclass
-from typing import Iterable, Mapping
+from collections.abc import Iterable, Mapping
+from dataclasses import dataclass, field
 
 import requests
 
@@ -16,33 +16,41 @@ class Metric:
     name: str
     metric_type: str
     value: float
-    labels: Mapping[str, str] = ()
+    labels: Mapping[str, str] = field(default_factory=dict)
 
 
 def _labels(labels: Mapping[str, str]) -> str:
     if not labels:
         return ""
+
     escaped = []
+
     for key, value in sorted(labels.items()):
         safe_value = (
             str(value).replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n")
         )
         escaped.append(f'{key}="{safe_value}"')
+
     return "{" + ",".join(escaped) + "}"
 
 
 def push_metrics(job: str, metrics: Iterable[Metric]) -> None:
     """Push bounded operational metrics without making monitoring a dependency."""
     metric_list = list(metrics)
+
     if not metric_list:
         return
+
     lines = []
     seen = set()
+
     for metric in metric_list:
         if metric.name not in seen:
             lines.append(f"# TYPE {metric.name} {metric.metric_type}")
             seen.add(metric.name)
+
         lines.append(f"{metric.name}{_labels(metric.labels)} {metric.value}")
+
     try:
         requests.put(
             f"{PUSHGATEWAY_URL}/metrics/job/{job}",

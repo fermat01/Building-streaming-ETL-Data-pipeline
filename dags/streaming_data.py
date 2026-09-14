@@ -3,13 +3,14 @@ import logging
 import os
 import time
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import List
 
 import requests
-from airflow import DAG
-from airflow.operators.python import PythonOperator
+from airflow import DAG  # pyright: ignore[reportMissingImports]
+from airflow.operators.python import (  # pyright: ignore[reportMissingImports]
+    PythonOperator,
+)
 from confluent_kafka import Producer
 
 from monitoring.metrics import Metric, push_metrics
@@ -59,10 +60,17 @@ def format_user_data(data_from_api: dict) -> dict:
     """Formats the fetched user data for Kafka streaming."""
     return {
         "event_id": str(uuid.uuid4()),
-        "full_name": f"{data_from_api['name']['title']}. {data_from_api['name']['first']} {data_from_api['name']['last']}",
+        "full_name": (
+            f"{data_from_api['name']['title']}. "
+            f"{data_from_api['name']['first']} "
+            f"{data_from_api['name']['last']}"
+        ),
         "gender": data_from_api["gender"],
         "age": data_from_api["dob"]["age"],
-        "address": f"{data_from_api['location']['street']['number']}, {data_from_api['location']['street']['name']}",
+        "address": (
+            f"{data_from_api['location']['street']['number']} "
+            f"{data_from_api['location']['street']['name']}"
+        ),
         "city": data_from_api["location"]["city"],
         "email": data_from_api["email"],
         "phone": data_from_api["phone"],
@@ -73,7 +81,7 @@ def format_user_data(data_from_api: dict) -> dict:
         "latitude": float(data_from_api["location"]["coordinates"]["latitude"]),
         "longitude": float(data_from_api["location"]["coordinates"]["longitude"]),
         "picture": data_from_api["picture"]["large"],
-        "ingested_at": datetime.now(timezone.utc).isoformat(),
+        "ingested_at": datetime.now(UTC).isoformat(),
     }
 
 
@@ -83,7 +91,7 @@ def encrypt_zip(zip_code: object) -> str:
     return hashlib.md5(zip_str.encode("utf-8")).hexdigest()
 
 
-def configure_kafka(servers: List[str] = KAFKA_BOOTSTRAP_SERVERS) -> Producer:
+def configure_kafka(servers: list[str] = KAFKA_BOOTSTRAP_SERVERS) -> Producer:
     """Create a reliable, idempotent producer for the Kafka cluster."""
     producer_username = os.getenv("KAFKA_PRODUCER_USERNAME", KAFKA_PRODUCER_USERNAME)
     producer_password = os.getenv("KAFKA_PRODUCER_PASSWORD", KAFKA_PRODUCER_PASSWORD)
@@ -115,8 +123,10 @@ def configure_kafka(servers: List[str] = KAFKA_BOOTSTRAP_SERVERS) -> Producer:
 
 def configure_schema_serializer():
     """Create an Avro serializer backed by the governed Schema Registry subject."""
-    from confluent_kafka.schema_registry import SchemaRegistryClient
-    from confluent_kafka.schema_registry import topic_subject_name_strategy
+    from confluent_kafka.schema_registry import (
+        SchemaRegistryClient,
+        topic_subject_name_strategy,
+    )
     from confluent_kafka.schema_registry.avro import AvroSerializer
 
     missing = [
@@ -136,7 +146,9 @@ def configure_schema_serializer():
     schema_client = SchemaRegistryClient(
         {
             "url": SCHEMA_REGISTRY_URL,
-            "basic.auth.user.info": f"{SCHEMA_REGISTRY_USERNAME}:{SCHEMA_REGISTRY_PASSWORD}",
+            "basic.auth.user.info": (
+                f"{SCHEMA_REGISTRY_USERNAME}:{SCHEMA_REGISTRY_PASSWORD}"
+            ),
         }
     )
     schema_string = SCHEMA_PATH.read_text(encoding="utf-8")
@@ -228,10 +240,7 @@ with DAG(
     description="Stream random user names to Kafka topic",
     max_active_runs=1,
 ) as dag:
-
     # Defining the data streaming task using PythonOperator
     streaming_task = PythonOperator(
         task_id="stream_to_kafka_task", python_callable=initiate_stream, dag=dag
     )
-
-    streaming_task

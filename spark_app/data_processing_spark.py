@@ -15,7 +15,7 @@ from pyspark.sql.functions import (
     when,
 )
 from pyspark.sql.types import StringType
-
+from schema_codec import decode_confluent_payload
 from streaming_common import (
     CHECKPOINT_ROOT,
     PROCESSED_PATH,
@@ -25,7 +25,6 @@ from streaming_common import (
     user_schema,
     validate_configuration,
 )
-from schema_codec import decode_confluent_payload
 from streaming_observability import StreamingMetricsListener
 
 logger = logging.getLogger("spark_data_quality")

@@ -12,10 +12,12 @@ _SCHEMA = None
 
 def _schema() -> Any:
     global _SCHEMA
+
     if _SCHEMA is None:
         from fastavro import parse_schema
 
         schema_path = os.getenv("EVENT_SCHEMA_PATH")
+
         if schema_path and Path(schema_path).exists():
             distributed_schema_path = Path(schema_path)
         else:
@@ -23,9 +25,11 @@ def _schema() -> Any:
                 from pyspark import SparkFiles
 
                 distributed_schema_path = Path(SparkFiles.get("user_event.avsc"))
-            except (ImportError, RuntimeError):
+            except (ImportError, RuntimeError, AssertionError):
                 distributed_schema_path = SCHEMA_PATH
+
         _SCHEMA = parse_schema(json.loads(distributed_schema_path.read_text()))
+
     return _SCHEMA
 
 
@@ -42,7 +46,11 @@ def decode_confluent_payload(payload: bytes) -> str | None:
         if len(payload) >= 5 and payload[0] == 0:
             from fastavro import schemaless_reader
 
-            record = schemaless_reader(io.BytesIO(payload[5:]), _schema())
+            record = schemaless_reader(
+                io.BytesIO(payload[5:]),
+                writer_schema=_schema(),
+                reader_schema=None,
+            )
             return json.dumps(record)
         return payload.decode("utf-8")
     except (ImportError, UnicodeDecodeError, ValueError, TypeError, EOFError) as error:

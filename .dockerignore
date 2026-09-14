@@ -31,3 +31,11 @@ images/
 README.md
 LICENSE
 tests/
+
+
+# Local Python environment and tooling caches
+.venv/
+.pytest_cache/
+.ruff_cache/
+__pycache__/
+*.py[cod]

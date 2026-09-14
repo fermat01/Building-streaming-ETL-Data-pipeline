@@ -2,11 +2,13 @@ import importlib
 import sys
 import types
 import unittest
+from types import ModuleType
+from typing import Any
 from unittest.mock import patch
 
 
-def load_streaming_module():
-    airflow = types.ModuleType("airflow")
+def load_streaming_module() -> ModuleType:
+    airflow: Any = types.ModuleType("airflow")
 
     class FakeDAG:
         def __init__(self, *args, **kwargs):
@@ -19,15 +21,17 @@ def load_streaming_module():
             return False
 
     airflow.DAG = FakeDAG
+
     airflow_operators = types.ModuleType("airflow.operators")
-    airflow_python = types.ModuleType("airflow.operators.python")
+    airflow_python: Any = types.ModuleType("airflow.operators.python")
 
     class FakePythonOperator:
         def __init__(self, *args, **kwargs):
             pass
 
     airflow_python.PythonOperator = FakePythonOperator
-    confluent_kafka = types.ModuleType("confluent_kafka")
+
+    confluent_kafka: Any = types.ModuleType("confluent_kafka")
     confluent_kafka.Producer = object
 
     with patch.dict(
@@ -42,7 +46,7 @@ def load_streaming_module():
         return importlib.import_module("dags.streaming_data")
 
 
-streaming_data = load_streaming_module()
+streaming_data: ModuleType = load_streaming_module()
 
 
 class StreamingDataUnitTests(unittest.TestCase):
@@ -75,6 +79,8 @@ class StreamingDataUnitTests(unittest.TestCase):
         event = streaming_data.format_user_data(api_user)
 
         self.assertEqual(event["full_name"], "Ms. Ada Lovelace")
+        self.assertEqual(event["address"], "1 Example Street")
+        self.assertIsInstance(event["address"], str)
         self.assertEqual(event["country"], "United Kingdom")
         self.assertEqual(event["latitude"], 51.5)
         self.assertEqual(event["longitude"], -0.1)
@@ -83,17 +89,25 @@ class StreamingDataUnitTests(unittest.TestCase):
     def test_configure_kafka_enables_reliable_delivery(self):
         producer = object()
 
-        with patch.dict(
-            "os.environ",
-            {
-                "KAFKA_PRODUCER_USERNAME": "producer",
-                "KAFKA_PRODUCER_PASSWORD": "producer-password",
-            },
-        ), patch.object(streaming_data, "Producer", return_value=producer) as factory:
+        with (
+            patch.dict(
+                "os.environ",
+                {
+                    "KAFKA_PRODUCER_USERNAME": "producer",
+                    "KAFKA_PRODUCER_PASSWORD": "producer-password",
+                },
+            ),
+            patch.object(
+                streaming_data,
+                "Producer",
+                return_value=producer,
+            ) as factory,
+        ):
             result = streaming_data.configure_kafka(["broker:9092"])
 
         self.assertIs(result, producer)
         settings = factory.call_args.args[0]
+
         self.assertEqual(settings["bootstrap.servers"], "broker:9092")
         self.assertEqual(settings["acks"], "all")
         self.assertTrue(settings["enable.idempotence"])
@@ -103,11 +117,12 @@ class StreamingDataUnitTests(unittest.TestCase):
         self.assertEqual(settings["sasl.username"], "producer")
 
     def test_configure_kafka_requires_credentials(self):
-        with patch.object(
-            streaming_data, "KAFKA_PRODUCER_USERNAME", None
-        ), patch.object(streaming_data, "KAFKA_PRODUCER_PASSWORD", None):
-            with self.assertRaisesRegex(ValueError, "KAFKA_PRODUCER_USERNAME"):
-                streaming_data.configure_kafka(["broker:9092"])
+        with (
+            patch.object(streaming_data, "KAFKA_PRODUCER_USERNAME", None),
+            patch.object(streaming_data, "KAFKA_PRODUCER_PASSWORD", None),
+            self.assertRaisesRegex(ValueError, "KAFKA_PRODUCER_USERNAME"),
+        ):
+            streaming_data.configure_kafka(["broker:9092"])
 
 
 if __name__ == "__main__":
