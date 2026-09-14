@@ -1,4 +1,21 @@
-__pycache__
+
 logs
 LICENSE
 README.md
+
+
+
+
+
+# Python environments and caches
+.venv/
+.pytest_cache/
+.ruff_cache/
+__pycache__/
+*.py[cod]
+.env
+.env.*
+!.env.example
+
+*.py[cod]
+logs/

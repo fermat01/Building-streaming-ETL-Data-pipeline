@@ -1,0 +1,65 @@
+groups:
+  - name: streaming-pipeline
+    rules:
+      - alert: KafkaUnderReplicatedPartitions
+        expr: kafka_topic_partition_under_replicated_partition > 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: Kafka has under-replicated partitions
+          description: A Kafka partition is below its configured replication target.
+
+      - alert: KafkaOfflinePartitions
+        expr: kafka_controller_kafkacontroller_offline_partitions_count > 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: Kafka has offline partitions
+          description: Kafka reports one or more offline partitions.
+
+      - alert: KafkaConsumerLagHigh
+        expr: kafka_consumergroup_lag_sum{consumergroup="spark-streaming-consumer"} > 100
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: Spark consumer lag is high
+          description: Development threshold of 100 messages has been exceeded.
+
+      - alert: SparkQueryFailed
+        expr: spark_query_failed > 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: A Spark streaming query failed
+          description: The query termination metric reports a failure.
+
+      - alert: AirflowTaskFailures
+        expr: increase(airflow_ti_failures_total[15m]) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: An Airflow task failed
+          description: A task failure was reported in the last 15 minutes.
+
+      - alert: ContainerUnavailable
+        expr: up{job=~"kafka|airflow|spark-master|spark-workers|minio"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: A monitored service is unavailable
+          description: Prometheus cannot scrape a required pipeline target.
+
+      - alert: ContainerMemoryHigh
+        expr: (container_memory_working_set_bytes / container_spec_memory_limit_bytes) > 0.9 and container_spec_memory_limit_bytes > 0
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: Container memory usage is high
+          description: Development threshold of 90 percent has been exceeded.

@@ -1,4 +1,0 @@
-confluent-kafka
-requests
-json5
-pyspark

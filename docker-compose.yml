@@ -1,199 +1,1040 @@
-
 services:
-  
-    # Airflow PostgreSQL Database
+  # ============================================================
+  # Airflow PostgreSQL Database
+  # ============================================================
   postgres:
     image: postgres:13
+
     container_name: postgres13
+
+    restart: unless-stopped
+
+    env_file:
+      - .env
+
     environment:
-      POSTGRES_USER: airflow
-      POSTGRES_PASSWORD: airflow
-      POSTGRES_DB: airflowdb
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
     logging:
       options:
         max-size: 10m
         max-file: "3"
 
+  # ============================================================
+  # Airflow Initialization
+  #
+  # Runs database migrations and creates the admin user.
+  # This service exits after successful initialization.
+  # ============================================================
+  airflow-init:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    container_name: airflow_init
+
+    restart: "no"
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    env_file:
+      - .env
+
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./schemas:/opt/airflow/schemas:ro
+      - ./logs:/opt/airflow/logs
+      - ./scripts:/opt/airflow/scripts
+
+    command:
+      - bash
+      - /opt/airflow/scripts/init-airflow.sh
+
+  # ============================================================
+  # Airflow Webserver
+  # ============================================================
   webserver:
     build:
       context: .
       dockerfile: Dockerfile
-    entrypoint: ./scripts/entrypoint.sh
+
     container_name: airflow_webserver
+
     restart: on-failure
+
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
+
+      airflow-init:
+        condition: service_completed_successfully
+
     env_file:
       - .env
+
+    environment:
+      PYTHONPATH: /opt/airflow
+      AIRFLOW__METRICS__STATSD_ON: "True"
+      AIRFLOW__METRICS__STATSD_HOST: airflow-statsd-exporter
+      AIRFLOW__METRICS__STATSD_PORT: 9125
+      AIRFLOW__METRICS__STATSD_PREFIX: airflow
+
     volumes:
       - ./dags:/opt/airflow/dags
+      - ./schemas:/opt/airflow/schemas:ro
       - ./logs:/opt/airflow/logs
       - ./scripts:/opt/airflow/scripts
+      - ./monitoring:/opt/airflow/monitoring:ro
+
     ports:
       - "8080:8080"
 
+    command:
+      - webserver
+      - --port
+      - "8080"
+
+  # ============================================================
+  # Airflow Scheduler
+  # ============================================================
   scheduler:
     build:
       context: .
       dockerfile: Dockerfile
-    command: scheduler
+
     container_name: airflow_scheduler
+
     restart: on-failure
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+      airflow-init:
+        condition: service_completed_successfully
+
     env_file:
       - .env
+
+    environment:
+      PYTHONPATH: /opt/airflow
+      AIRFLOW__METRICS__STATSD_ON: "True"
+      AIRFLOW__METRICS__STATSD_HOST: airflow-statsd-exporter
+      AIRFLOW__METRICS__STATSD_PORT: 9125
+      AIRFLOW__METRICS__STATSD_PREFIX: airflow
+
     volumes:
       - ./dags:/opt/airflow/dags
+      - ./schemas:/opt/airflow/schemas:ro
       - ./logs:/opt/airflow/logs
-  
+      - ./scripts:/opt/airflow/scripts
+      - ./monitoring:/opt/airflow/monitoring:ro
 
-  # Zookeeper for Kafka
+    command:
+      - scheduler
+
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          'airflow jobs check --job-type SchedulerJob --hostname "$$(hostname)"',
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # ============================================================
+  # ============================================================
+  # ZooKeeper
+  # ============================================================
   zookeeper:
-    image: confluentinc/cp-zookeeper:latest
+    image: confluentinc/cp-zookeeper:7.7.0
+
     hostname: zookeeper
+
     container_name: zookeeper
+
+    restart: unless-stopped
+
     ports:
       - "2181:2181"
+
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
 
+  # ============================================================
+  # Kafka SCRAM credential bootstrap
+  # ============================================================
+  kafka-credentials-init:
+    image: confluentinc/cp-kafka:7.7.0
+
+    container_name: kafka-credentials-init
+
+    depends_on:
+      - zookeeper
+
+    env_file:
+      - .env
+
+    volumes:
+      - ./scripts:/opt/kafka-scripts:ro
+
+    command:
+      - bash
+      - /opt/kafka-scripts/init-kafka-users.sh
+
+  # ============================================================
+  # Kafka Broker 1
+  # ============================================================
   broker-1:
-    image: confluentinc/cp-kafka:latest
+    image: confluentinc/cp-kafka:7.7.0
+
     hostname: broker-1
+
     container_name: broker-1
+
+    restart: unless-stopped
+
     depends_on:
-      - zookeeper
+      zookeeper:
+        condition: service_started
+      kafka-credentials-init:
+        condition: service_completed_successfully
+
     ports:
-      - "9092:9092"
+      - "19092:19092"
+
     environment:
+      # --------------------------------------------------------
+      # Broker identity
+      # --------------------------------------------------------
       KAFKA_BROKER_ID: 1
+
+      KAFKA_ADMIN_USERNAME: ${KAFKA_ADMIN_USERNAME}
+      KAFKA_ADMIN_PASSWORD: ${KAFKA_ADMIN_PASSWORD}
+
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker-1:9092
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
-      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+
+      # --------------------------------------------------------
+      # Listeners
+      # --------------------------------------------------------
+      KAFKA_LISTENERS: "INTERNAL://0.0.0.0:9092,EXTERNAL://0.0.0.0:19092"
+
+      KAFKA_ADVERTISED_LISTENERS: "INTERNAL://broker-1:9092,EXTERNAL://localhost:19092"
+
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "INTERNAL:SASL_PLAINTEXT,EXTERNAL:SASL_PLAINTEXT"
+
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+
+      KAFKA_SASL_ENABLED_MECHANISMS: SCRAM-SHA-256
+      KAFKA_SASL_MECHANISM_INTER_BROKER_PROTOCOL: SCRAM-SHA-256
+      KAFKA_LISTENER_NAME_INTERNAL_SCRAM___SHA___256_SASL_JAAS_CONFIG: >-
+        org.apache.kafka.common.security.scram.ScramLoginModule required
+        username="${KAFKA_ADMIN_USERNAME}" password="${KAFKA_ADMIN_PASSWORD}";
+      KAFKA_LISTENER_NAME_EXTERNAL_SCRAM___SHA___256_SASL_JAAS_CONFIG: >-
+        org.apache.kafka.common.security.scram.ScramLoginModule required
+        username="${KAFKA_ADMIN_USERNAME}" password="${KAFKA_ADMIN_PASSWORD}";
+      KAFKA_AUTHORIZER_CLASS_NAME: kafka.security.authorizer.AclAuthorizer
+      KAFKA_ALLOW_EVERYONE_IF_NO_ACL_FOUND: "false"
+      KAFKA_SUPER_USERS: User:${KAFKA_ADMIN_USERNAME}
+
+      # --------------------------------------------------------
+      # Reliability
+      # --------------------------------------------------------
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 3
+
+      KAFKA_MIN_INSYNC_REPLICAS: 2
+
+      # --------------------------------------------------------
+      # Internal Kafka topics
+      # --------------------------------------------------------
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
 
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 3
+
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 2
+
+      # --------------------------------------------------------
+      # Default partitions
+      # --------------------------------------------------------
+      KAFKA_NUM_PARTITIONS: 3
+
+      # --------------------------------------------------------
+      # Topic creation
+      # --------------------------------------------------------
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "printf '%s\\n' 'security.protocol=SASL_PLAINTEXT' 'sasl.mechanism=SCRAM-SHA-256' 'sasl.jaas.config=org.apache.kafka.common.security.scram.ScramLoginModule required username=\"'\"$${KAFKA_ADMIN_USERNAME}\"'\" password=\"'\"$${KAFKA_ADMIN_PASSWORD}\"'\";' > /tmp/health.properties && kafka-broker-api-versions --bootstrap-server localhost:9092 --command-config /tmp/health.properties >/dev/null 2>&1",
+        ]
+      interval: 10s
+      timeout: 10s
+      retries: 12
+      start_period: 20s
+
+    volumes:
+      - kafka1-data:/var/lib/kafka/data
+
+  # ============================================================
+  # Kafka Broker 2
+  # ============================================================
   broker-2:
-    image: confluentinc/cp-kafka:latest
+    image: confluentinc/cp-kafka:7.7.0
+
     hostname: broker-2
+
     container_name: broker-2
+
+    restart: unless-stopped
+
     depends_on:
-      - zookeeper
+      zookeeper:
+        condition: service_started
+      kafka-credentials-init:
+        condition: service_completed_successfully
+
     ports:
-      - "9093:9093"
+      - "19093:19093"
+
     environment:
+      # --------------------------------------------------------
+      # Broker identity
+      # --------------------------------------------------------
       KAFKA_BROKER_ID: 2
+
+      KAFKA_ADMIN_USERNAME: ${KAFKA_ADMIN_USERNAME}
+      KAFKA_ADMIN_PASSWORD: ${KAFKA_ADMIN_PASSWORD}
+
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker-2:9093
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
-      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+
+      # --------------------------------------------------------
+      # Listeners
+      # --------------------------------------------------------
+      KAFKA_LISTENERS: "INTERNAL://0.0.0.0:9093,EXTERNAL://0.0.0.0:19093"
+
+      KAFKA_ADVERTISED_LISTENERS: "INTERNAL://broker-2:9093,EXTERNAL://localhost:19093"
+
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "INTERNAL:SASL_PLAINTEXT,EXTERNAL:SASL_PLAINTEXT"
+
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+
+      KAFKA_SASL_ENABLED_MECHANISMS: SCRAM-SHA-256
+      KAFKA_SASL_MECHANISM_INTER_BROKER_PROTOCOL: SCRAM-SHA-256
+      KAFKA_LISTENER_NAME_INTERNAL_SCRAM___SHA___256_SASL_JAAS_CONFIG: >-
+        org.apache.kafka.common.security.scram.ScramLoginModule required
+        username="${KAFKA_ADMIN_USERNAME}" password="${KAFKA_ADMIN_PASSWORD}";
+      KAFKA_LISTENER_NAME_EXTERNAL_SCRAM___SHA___256_SASL_JAAS_CONFIG: >-
+        org.apache.kafka.common.security.scram.ScramLoginModule required
+        username="${KAFKA_ADMIN_USERNAME}" password="${KAFKA_ADMIN_PASSWORD}";
+      KAFKA_AUTHORIZER_CLASS_NAME: kafka.security.authorizer.AclAuthorizer
+      KAFKA_ALLOW_EVERYONE_IF_NO_ACL_FOUND: "false"
+      KAFKA_SUPER_USERS: User:${KAFKA_ADMIN_USERNAME}
+
+      # --------------------------------------------------------
+      # Reliability
+      # --------------------------------------------------------
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 3
+
+      KAFKA_MIN_INSYNC_REPLICAS: 2
+
+      # --------------------------------------------------------
+      # Internal Kafka topics
+      # --------------------------------------------------------
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
 
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 3
+
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 2
+
+      # --------------------------------------------------------
+      # Default partitions
+      # --------------------------------------------------------
+      KAFKA_NUM_PARTITIONS: 3
+
+      # --------------------------------------------------------
+      # Topic creation
+      # --------------------------------------------------------
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "printf '%s\\n' 'security.protocol=SASL_PLAINTEXT' 'sasl.mechanism=SCRAM-SHA-256' 'sasl.jaas.config=org.apache.kafka.common.security.scram.ScramLoginModule required username=\"'\"$${KAFKA_ADMIN_USERNAME}\"'\" password=\"'\"$${KAFKA_ADMIN_PASSWORD}\"'\";' > /tmp/health.properties && kafka-broker-api-versions --bootstrap-server localhost:9093 --command-config /tmp/health.properties >/dev/null 2>&1",
+        ]
+      interval: 10s
+      timeout: 10s
+      retries: 12
+      start_period: 20s
+
+    volumes:
+      - kafka2-data:/var/lib/kafka/data
+
+  # ============================================================
+  # Kafka Broker 3
+  # ============================================================
   broker-3:
-    image: confluentinc/cp-kafka:latest
+    image: confluentinc/cp-kafka:7.7.0
+
     hostname: broker-3
+
     container_name: broker-3
+
+    restart: unless-stopped
+
     depends_on:
-      - zookeeper
+      zookeeper:
+        condition: service_started
+      kafka-credentials-init:
+        condition: service_completed_successfully
+
     ports:
-      - "9094:9094"
+      - "19094:19094"
+
     environment:
+      # --------------------------------------------------------
+      # Broker identity
+      # --------------------------------------------------------
       KAFKA_BROKER_ID: 3
+
+      KAFKA_ADMIN_USERNAME: ${KAFKA_ADMIN_USERNAME}
+      KAFKA_ADMIN_PASSWORD: ${KAFKA_ADMIN_PASSWORD}
+
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker-3:9094
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
-      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+
+      # --------------------------------------------------------
+      # Listeners
+      # --------------------------------------------------------
+      KAFKA_LISTENERS: "INTERNAL://0.0.0.0:9094,EXTERNAL://0.0.0.0:19094"
+
+      KAFKA_ADVERTISED_LISTENERS: "INTERNAL://broker-3:9094,EXTERNAL://localhost:19094"
+
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "INTERNAL:SASL_PLAINTEXT,EXTERNAL:SASL_PLAINTEXT"
+
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+
+      KAFKA_SASL_ENABLED_MECHANISMS: SCRAM-SHA-256
+      KAFKA_SASL_MECHANISM_INTER_BROKER_PROTOCOL: SCRAM-SHA-256
+      KAFKA_LISTENER_NAME_INTERNAL_SCRAM___SHA___256_SASL_JAAS_CONFIG: >-
+        org.apache.kafka.common.security.scram.ScramLoginModule required
+        username="${KAFKA_ADMIN_USERNAME}" password="${KAFKA_ADMIN_PASSWORD}";
+      KAFKA_LISTENER_NAME_EXTERNAL_SCRAM___SHA___256_SASL_JAAS_CONFIG: >-
+        org.apache.kafka.common.security.scram.ScramLoginModule required
+        username="${KAFKA_ADMIN_USERNAME}" password="${KAFKA_ADMIN_PASSWORD}";
+      KAFKA_AUTHORIZER_CLASS_NAME: kafka.security.authorizer.AclAuthorizer
+      KAFKA_ALLOW_EVERYONE_IF_NO_ACL_FOUND: "false"
+      KAFKA_SUPER_USERS: User:${KAFKA_ADMIN_USERNAME}
+
+      # --------------------------------------------------------
+      # Reliability
+      # --------------------------------------------------------
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 3
+
+      KAFKA_MIN_INSYNC_REPLICAS: 2
+
+      # --------------------------------------------------------
+      # Internal Kafka topics
+      # --------------------------------------------------------
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
 
-  schema_registry:
-    image: confluentinc/cp-schema-registry:latest
-    hostname: schema_registry
-    container_name: schema_registry
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 3
+
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 2
+
+      # --------------------------------------------------------
+      # Default partitions
+      # --------------------------------------------------------
+      KAFKA_NUM_PARTITIONS: 3
+
+      # --------------------------------------------------------
+      # Topic creation
+      # --------------------------------------------------------
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "printf '%s\\n' 'security.protocol=SASL_PLAINTEXT' 'sasl.mechanism=SCRAM-SHA-256' 'sasl.jaas.config=org.apache.kafka.common.security.scram.ScramLoginModule required username=\"'\"$${KAFKA_ADMIN_USERNAME}\"'\" password=\"'\"$${KAFKA_ADMIN_PASSWORD}\"'\";' > /tmp/health.properties && kafka-broker-api-versions --bootstrap-server localhost:9094 --command-config /tmp/health.properties >/dev/null 2>&1",
+        ]
+      interval: 10s
+      timeout: 10s
+      retries: 12
+      start_period: 20s
+
+    volumes:
+      - kafka3-data:/var/lib/kafka/data
+
+  # ============================================================
+  # Kafka Initialization
+  #
+  # Creates:
+  #   - streaming-topic
+  #   - Kafka Connect internal topics
+  #
+  # Runs once and exits successfully.
+  # ============================================================
+  kafka-init:
+    image: confluentinc/cp-kafka:7.7.0
+
+    container_name: kafka-init
+
     depends_on:
-      - broker-1
-      - broker-2
-      - broker-3
+      broker-1:
+        condition: service_healthy
+
+      broker-2:
+        condition: service_healthy
+
+      broker-3:
+        condition: service_healthy
+
+    env_file:
+      - .env
+
+    volumes:
+      - ./scripts:/opt/kafka-scripts:ro
+
+    command:
+      - bash
+      - /opt/kafka-scripts/init-kafka.sh
+
+  # ============================================================
+  # Schema Registry
+  # ============================================================
+  schema_registry:
+    image: confluentinc/cp-schema-registry:7.7.0
+
+    hostname: schema_registry
+
+    container_name: schema_registry
+
+    restart: unless-stopped
+
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+
     ports:
       - "8081:8081"
+
+    env_file:
+      - .env
+
     environment:
       SCHEMA_REGISTRY_HOST_NAME: schema_registry
-      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: 'PLAINTEXT://broker-1:9092,PLAINTEXT://broker-2:9093,PLAINTEXT://broker-3:9094'
-      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
 
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: "SASL_PLAINTEXT://broker-1:9092,SASL_PLAINTEXT://broker-2:9093,SASL_PLAINTEXT://broker-3:9094"
+      SCHEMA_REGISTRY_KAFKASTORE_SECURITY_PROTOCOL: SASL_PLAINTEXT
+      SCHEMA_REGISTRY_KAFKASTORE_SASL_MECHANISM: SCRAM-SHA-256
+      SCHEMA_REGISTRY_KAFKASTORE_SASL_JAAS_CONFIG: >-
+        org.apache.kafka.common.security.scram.ScramLoginModule required
+        username="${KAFKA_SCHEMA_REGISTRY_USERNAME}" password="${KAFKA_SCHEMA_REGISTRY_PASSWORD}";
+
+      SCHEMA_REGISTRY_KAFKASTORE_TOPIC_REPLICATION_FACTOR: 3
+      SCHEMA_REGISTRY_SCHEMA_COMPATIBILITY_LEVEL: BACKWARD_TRANSITIVE
+
+      SCHEMA_REGISTRY_LISTENERS: "http://0.0.0.0:8081"
+
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8081/subjects >/dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+  # ============================================================
+  # Kafka Connect
+  # ============================================================
   kafka_connect:
-    image: confluentinc/cp-kafka-connect:latest
-    hostname: connect
+    image: confluentinc/cp-kafka-connect:7.7.0
+
+    hostname: kafka-connect
+
     container_name: kafka-connect
+
+    restart: unless-stopped
+
     depends_on:
-      - broker-1
-      - broker-2
-      - broker-3
-      - schema_registry
+      kafka-init:
+        condition: service_completed_successfully
+
+      schema_registry:
+        condition: service_started
+
     ports:
       - "8083:8083"
-    environment:
-      CONNECT_BOOTSTRAP_SERVERS: 'PLAINTEXT://broker-1:9092,PLAINTEXT://broker-2:9093,PLAINTEXT://broker-3:9094'
-      CONNECT_REST_ADVERTISED_HOST_NAME: kafka-connect
-      CONNECT_REST_PORT: 8083
-      CONNECT_GROUP_ID: compose-connect-group
-      CONNECT_CONFIG_STORAGE_TOPIC: docker-connect-configs
-      CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: 3
-      CONNECT_OFFSET_STORAGE_TOPIC: docker-connect-offsets
-      CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: 3
-      CONNECT_STATUS_STORAGE_TOPIC: docker-connect-status
-      CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: 3
-      CONNECT_KEY_CONVERTER: org.apache.kafka.connect.storage.StringConverter
-      CONNECT_KEY_CONVERTER_SCHEMA_REGISTRY_URL: 'http://schema_registry:8081'
-      CONNECT_VALUE_CONVERTER: org.apache.kafka.connect.storage.StringConverter
-      CONNECT_VALUE_CONVERTER_SCHEMA_REGISTRY_URL: 'http://schema_registry:8081'
-      CONNECT_PLUGIN_PATH: "/usr/share/java,/usr/share/confluent-hub-components"
-      CONNECT_LOG4J_LOGGERS: org.apache.zookeeper=ERROR,org.I0Itec.zkclient=ERROR,org.reflections=ERROR
 
+    env_file:
+      - .env
+
+    environment:
+      # --------------------------------------------------------
+      # Kafka cluster
+      # --------------------------------------------------------
+      CONNECT_BOOTSTRAP_SERVERS: "broker-1:9092,broker-2:9093,broker-3:9094"
+      CONNECT_SECURITY_PROTOCOL: SASL_PLAINTEXT
+      CONNECT_SASL_MECHANISM: SCRAM-SHA-256
+      CONNECT_SASL_JAAS_CONFIG: >-
+        org.apache.kafka.common.security.scram.ScramLoginModule required
+        username="${KAFKA_CONNECT_USERNAME}" password="${KAFKA_CONNECT_PASSWORD}";
+      CONNECT_PRODUCER_SECURITY_PROTOCOL: SASL_PLAINTEXT
+      CONNECT_PRODUCER_SASL_MECHANISM: SCRAM-SHA-256
+      CONNECT_PRODUCER_SASL_JAAS_CONFIG: >-
+        org.apache.kafka.common.security.scram.ScramLoginModule required
+        username="${KAFKA_CONNECT_USERNAME}" password="${KAFKA_CONNECT_PASSWORD}";
+      CONNECT_CONSUMER_SECURITY_PROTOCOL: SASL_PLAINTEXT
+      CONNECT_CONSUMER_SASL_MECHANISM: SCRAM-SHA-256
+      CONNECT_CONSUMER_SASL_JAAS_CONFIG: >-
+        org.apache.kafka.common.security.scram.ScramLoginModule required
+        username="${KAFKA_CONNECT_USERNAME}" password="${KAFKA_CONNECT_PASSWORD}";
+
+      # --------------------------------------------------------
+      # Kafka Connect worker
+      # --------------------------------------------------------
+      CONNECT_REST_ADVERTISED_HOST_NAME: kafka-connect
+
+      CONNECT_REST_PORT: 8083
+
+      CONNECT_GROUP_ID: compose-connect-group
+
+      # --------------------------------------------------------
+      # Config topic
+      # --------------------------------------------------------
+      CONNECT_CONFIG_STORAGE_TOPIC: docker-connect-configs
+
+      CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: 3
+
+      # --------------------------------------------------------
+      # Offset topic
+      # --------------------------------------------------------
+      CONNECT_OFFSET_STORAGE_TOPIC: docker-connect-offsets
+
+      CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: 3
+
+      # --------------------------------------------------------
+      # Status topic
+      # --------------------------------------------------------
+      CONNECT_STATUS_STORAGE_TOPIC: docker-connect-status
+
+      CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: 3
+
+      # --------------------------------------------------------
+      # Converters
+      # --------------------------------------------------------
+      CONNECT_KEY_CONVERTER: org.apache.kafka.connect.storage.StringConverter
+
+      CONNECT_VALUE_CONVERTER: org.apache.kafka.connect.storage.StringConverter
+
+      CONNECT_INTERNAL_KEY_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+
+      CONNECT_INTERNAL_VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+
+      CONNECT_INTERNAL_KEY_CONVERTER_SCHEMAS_ENABLE: "false"
+
+      CONNECT_INTERNAL_VALUE_CONVERTER_SCHEMAS_ENABLE: "false"
+
+      # --------------------------------------------------------
+      # Plugins
+      # --------------------------------------------------------
+      CONNECT_PLUGIN_PATH: "/usr/share/java,/usr/share/confluent-hub-components"
+
+      # --------------------------------------------------------
+      # Logging
+      # --------------------------------------------------------
+      CONNECT_LOG4J_LOGGERS: >-
+        org.apache.zookeeper=ERROR,
+        org.I0Itec.zkclient=ERROR,
+        org.reflections=ERROR
+
+  # ============================================================
+  # Kafka UI
+  # ============================================================
   kafka_ui:
-    image: provectuslabs/kafka-ui:latest
+    image: provectuslabs/kafka-ui:v0.7.2
+
     container_name: kafka-ui-1
+
+    restart: unless-stopped
+
     depends_on:
-      - broker-1
-      - broker-2
-      - broker-3
-      - schema_registry
+      kafka-init:
+        condition: service_completed_successfully
+
+      schema_registry:
+        condition: service_started
+
     ports:
-      - 8888:8080
+      - "8888:8080"
+
+    env_file:
+      - .env
+
     environment:
       KAFKA_CLUSTERS_0_NAME: local
-      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: broker-1:9092,broker-2:9093,broker-3:9094
+
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: "broker-1:9092,broker-2:9093,broker-3:9094"
+      KAFKA_CLUSTERS_0_PROPERTIES_SECURITY_PROTOCOL: SASL_PLAINTEXT
+      KAFKA_CLUSTERS_0_PROPERTIES_SASL_MECHANISM: SCRAM-SHA-256
+      KAFKA_CLUSTERS_0_PROPERTIES_SASL_JAAS_CONFIG: >-
+        org.apache.kafka.common.security.scram.ScramLoginModule required
+        username="${KAFKA_UI_USERNAME}" password="${KAFKA_UI_PASSWORD}";
+
       KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
+
       KAFKA_CLUSTERS_0_SCHEMAREGISTRY: http://schema_registry:8081
 
-  spark_master:
-    image: bitnami/spark:3
-    container_name: spark_master
-    depends_on:
-      - kafka_connect
-    ports:
-      - 8085:8080
-    environment:
-      SPARK_UI_PORT: ${SPARK_UI_PORT}
-      SPARK_MODE: ${SPARK_MODE}
-      SPARK_RPC_AUTHENTICATION_ENABLED: ${SPARK_RPC_AUTHENTICATION_ENABLED}
-      SPARK_RPC_ENCRYPTION_ENABLED: ${SPARK_RPC_ENCRYPTION_ENABLED}
-    volumes:
-      - ./:/home
-      - spark_data:/opt/bitnami/spark/data
+  # ============================================================
+  # Spark Master
+  # ============================================================
+  spark-master:
+    build:
+      context: .
+      dockerfile: Dockerfile.spark
 
+    container_name: spark-master
+
+    hostname: spark-master
+
+    restart: unless-stopped
+
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+
+      minio:
+        condition: service_started
+
+    ports:
+      - "8085:8080"
+      - "7077:7077"
+
+    volumes:
+      - ./spark_app:/opt/spark/work-dir/spark_app:ro
+      - ./schemas:/opt/spark/work-dir/schemas:ro
+      - ./monitoring:/opt/spark/work-dir/monitoring:ro
+      - ./monitoring/hadoop/hadoop-metrics2.properties:/opt/spark/conf/hadoop-metrics2.properties:ro
+
+    env_file:
+      - .env
+
+    environment:
+      SPARK_MASTER_HOST: spark-master
+      SPARK_MASTER_PORT: 7077
+      SPARK_MASTER_WEBUI_PORT: 8080
+      SPARK_MASTER_OPTS: "-Dspark.metrics.conf=/opt/spark/work-dir/monitoring/spark/metrics.properties"
+      PYTHONPATH: /opt/spark/work-dir
+
+    command:
+      - /opt/spark/bin/spark-class
+      - org.apache.spark.deploy.master.Master
+      - --host
+      - spark-master
+      - --port
+      - "7077"
+      - --webui-port
+      - "8080"
+
+  # ============================================================
+  # Spark Worker 1
+  # ============================================================
+  spark-worker-1:
+    build:
+      context: .
+      dockerfile: Dockerfile.spark
+
+    container_name: spark-worker-1
+
+    hostname: spark-worker-1
+
+    restart: unless-stopped
+
+    depends_on:
+      spark-master:
+        condition: service_started
+
+    volumes:
+      - ./spark_app:/opt/spark/work-dir/spark_app:ro
+      - ./schemas:/opt/spark/work-dir/schemas:ro
+      - ./monitoring:/opt/spark/work-dir/monitoring:ro
+      - ./monitoring/hadoop/hadoop-metrics2.properties:/opt/spark/conf/hadoop-metrics2.properties:ro
+
+    environment:
+      SPARK_WORKER_CORES: 2
+      SPARK_WORKER_MEMORY: 2g
+      SPARK_WORKER_OPTS: "-Dspark.metrics.conf=/opt/spark/work-dir/monitoring/spark/metrics.properties"
+      PYTHONPATH: /opt/spark/work-dir
+
+    command:
+      - /opt/spark/bin/spark-class
+      - org.apache.spark.deploy.worker.Worker
+      - spark://spark-master:7077
+      - --cores
+      - "2"
+      - --memory
+      - "2g"
+
+  # ============================================================
+  # Spark Worker 2
+  # ============================================================
+  spark-worker-2:
+    build:
+      context: .
+      dockerfile: Dockerfile.spark
+
+    container_name: spark-worker-2
+
+    hostname: spark-worker-2
+
+    restart: unless-stopped
+
+    depends_on:
+      spark-master:
+        condition: service_started
+
+    volumes:
+      - ./spark_app:/opt/spark/work-dir/spark_app:ro
+      - ./schemas:/opt/spark/work-dir/schemas:ro
+      - ./monitoring:/opt/spark/work-dir/monitoring:ro
+      - ./monitoring/hadoop/hadoop-metrics2.properties:/opt/spark/conf/hadoop-metrics2.properties:ro
+
+    environment:
+      SPARK_WORKER_CORES: 2
+      SPARK_WORKER_MEMORY: 2g
+      SPARK_WORKER_OPTS: "-Dspark.metrics.conf=/opt/spark/work-dir/monitoring/spark/metrics.properties"
+      PYTHONPATH: /opt/spark/work-dir
+
+    command:
+      - /opt/spark/bin/spark-class
+      - org.apache.spark.deploy.worker.Worker
+      - spark://spark-master:7077
+      - --cores
+      - "2"
+      - --memory
+      - "2g"
+
+  # ============================================================
+  # Observability services
+  # ============================================================
+  kafka-exporter:
+    image: danielqsj/kafka-exporter:v1.8.0
+
+    container_name: kafka-exporter
+
+    restart: unless-stopped
+
+    env_file:
+      - .env
+
+    command:
+      - --kafka.server=broker-1:9092
+      - --kafka.server=broker-2:9093
+      - --kafka.server=broker-3:9094
+      - --sasl.enabled
+      - --sasl.username=${KAFKA_MONITORING_USERNAME}
+      - --sasl.password=${KAFKA_MONITORING_PASSWORD}
+      - --sasl.mechanism=sha256
+      - --web.listen-address=:9308
+
+    depends_on:
+      broker-1:
+        condition: service_healthy
+      broker-2:
+        condition: service_healthy
+      broker-3:
+        condition: service_healthy
+
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:9308/metrics >/dev/null"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  airflow-statsd-exporter:
+    image: prom/statsd-exporter:v0.28.0
+
+    container_name: airflow-statsd-exporter
+
+    restart: unless-stopped
+
+    command:
+      - --statsd.listen-udp=:9125
+      - --web.listen-address=:9102
+
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:9102/metrics >/dev/null"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  pushgateway:
+    image: prom/pushgateway:v1.10.0
+
+    container_name: pushgateway
+
+    restart: unless-stopped
+
+    healthcheck:
+      test:
+        ["CMD-SHELL", "wget -qO- http://localhost:9091/-/healthy >/dev/null"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.49.1
+
+    container_name: cadvisor
+
+    restart: unless-stopped
+
+    privileged: true
+
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/healthz >/dev/null"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  prometheus:
+    image: prom/prometheus:v2.55.1
+
+    container_name: prometheus
+
+    restart: unless-stopped
+
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=7d
+
+    ports:
+      - "9091:9090"
+
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus-data:/prometheus
+
+    depends_on:
+      - kafka-exporter
+      - airflow-statsd-exporter
+      - pushgateway
+
+    healthcheck:
+      test:
+        ["CMD-SHELL", "wget -qO- http://localhost:9090/-/healthy >/dev/null"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  grafana:
+    image: grafana/grafana:11.2.0
+
+    container_name: grafana
+
+    restart: unless-stopped
+
+    ports:
+      - "3000:3000"
+
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:?GRAFANA_ADMIN_USER is required}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD is required}
+
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+
+    depends_on:
+      prometheus:
+        condition: service_healthy
+
+    healthcheck:
+      test:
+        ["CMD-SHELL", "wget -qO- http://localhost:3000/api/health >/dev/null"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  # ============================================================
+  # MinIO
+  # ============================================================
   minio:
     image: minio/minio
+
     hostname: minio
+
     container_name: minio
+
+    restart: unless-stopped
+
     ports:
       - "9090:9000"
       - "9001:9001"
+
     environment:
-      MINIO_ROOT_USER: MINIOAIRFLOW01
-      MINIO_ROOT_PASSWORD: AIRFLOW123
-    command: server /data --console-address ":9001"
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      MINIO_PROMETHEUS_AUTH_TYPE: public
+
+    command:
+      - server
+      - /data
+      - --console-address
+      - ":9001"
+
+    volumes:
+      - minio-data:/data
+
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -fsS http://localhost:9000/minio/health/live >/dev/null",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+# ==============================================================
+# Persistent Volumes
+# ==============================================================
 volumes:
-  spark_data:
+  kafka1-data:
+  kafka2-data:
+  kafka3-data:
+  minio-data:
+  prometheus-data:
+  grafana-data:
+
+# ==============================================================
+# Network
+# ==============================================================
 networks:
   default:
     name: kafka-network

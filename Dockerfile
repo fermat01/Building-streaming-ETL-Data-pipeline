@@ -1,13 +1,19 @@
-FROM apache/airflow:2.7.3
+FROM apache/airflow:2.7.3-python3.11
+
 USER root
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-    vim \
-    && apt-get autoremove -yqq --purge \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-USER airflow
-RUN pip install --upgrade pip
-COPY requirements.txt /
-RUN  pip install --no-cache-dir -r /requirements.txt
+
+COPY --from=ghcr.io/astral-sh/uv:0.12.13 /uv /uvx /bin/
+
+WORKDIR /opt/airflow/project
+
+COPY pyproject.toml uv.lock ./
+
+RUN uv sync \
+    --locked \
+    --no-dev \
+    --extra airflow \
+    --no-install-project
+
+ENV PATH="/opt/airflow/project/.venv/bin:$PATH"
+
 USER airflow

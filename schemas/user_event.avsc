@@ -1,0 +1,24 @@
+{
+  "type": "record",
+  "name": "UserEvent",
+  "namespace": "streaming.etl",
+  "doc": "Canonical user event contract for streaming-topic",
+  "fields": [
+    { "name": "event_id", "type": "string" },
+    { "name": "full_name", "type": ["null", "string"], "default": null },
+    { "name": "gender", "type": ["null", "string"], "default": null },
+    { "name": "age", "type": ["null", "int"], "default": null },
+    { "name": "address", "type": ["null", "string"], "default": null },
+    { "name": "city", "type": ["null", "string"], "default": null },
+    { "name": "country", "type": ["null", "string"], "default": null },
+    { "name": "email", "type": ["null", "string"], "default": null },
+    { "name": "phone", "type": ["null", "string"], "default": null },
+    { "name": "username", "type": ["null", "string"], "default": null },
+    { "name": "registered_date", "type": ["null", "string"], "default": null },
+    { "name": "ingested_at", "type": ["null", "string"], "default": null },
+    { "name": "zip", "type": ["null", "string"], "default": null },
+    { "name": "latitude", "type": ["null", "double"], "default": null },
+    { "name": "longitude", "type": ["null", "double"], "default": null },
+    { "name": "picture", "type": ["null", "string"], "default": null }
+  ]
+}

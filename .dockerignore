@@ -1,0 +1,41 @@
+# Version-control and editor files
+.git
+.gitignore
+.vscode
+.idea
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Python caches and local environments
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+env/
+
+# Generated runtime data and logs
+logs/
+*.log
+
+# Local data and images not needed in the image build context
+images/
+
+# Documentation and tests are not needed at runtime
+README.md
+LICENSE
+tests/
+
+
+# Local Python environment and tooling caches
+.venv/
+.pytest_cache/
+.ruff_cache/
+__pycache__/
+*.py[cod]
