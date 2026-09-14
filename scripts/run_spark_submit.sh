@@ -18,9 +18,15 @@ cd "$SCRIPT_DIR/.."
 
 SPARK_CONTAINER="spark-master"
 SPARK_CONTAINERS=(spark-master spark-worker-1 spark-worker-2)
+
 SPARK_HOME="/opt/spark"
+
+# uv-managed Python environment inside Spark containers
+SPARK_PYTHON="/opt/spark/project/.venv/bin/python"
+
 # Keep the data-quality job's Ivy metadata separate from analytics submissions.
 IVY_CACHE="/tmp/.ivy2/data-quality"
+
 KAFKA_CLIENT_VERSION="3.4.1"
 KAFKA_CLIENT_JAR="${SPARK_HOME}/jars/kafka-clients-${KAFKA_CLIENT_VERSION}.jar"
 KAFKA_CLIENT_URL="https://repo1.maven.org/maven2/org/apache/kafka/kafka-clients/${KAFKA_CLIENT_VERSION}/kafka-clients-${KAFKA_CLIENT_VERSION}.jar"
@@ -36,10 +42,11 @@ MASTER="spark://spark-master:7077"
 
 SCRIPT="data_processing_spark.py"
 
-CONTAINER_SCRIPT="${SPARK_HOME}/work-dir/spark_app/${SCRIPT}"
-CONTAINER_CODEC="${SPARK_HOME}/work-dir/spark_app/schema_codec.py"
-CONTAINER_SCHEMA="${SPARK_HOME}/work-dir/schemas/user_event.avsc"
-CONTAINER_MONITORING="${SPARK_HOME}/work-dir/monitoring"
+CONTAINER_WORKDIR="${SPARK_HOME}/work-dir"
+CONTAINER_SCRIPT="${CONTAINER_WORKDIR}/spark_app/${SCRIPT}"
+CONTAINER_CODEC="${CONTAINER_WORKDIR}/spark_app/schema_codec.py"
+CONTAINER_SCHEMA="${CONTAINER_WORKDIR}/schemas/user_event.avsc"
+CONTAINER_MONITORING="${CONTAINER_WORKDIR}/monitoring"
 CONTAINER_MONITORING_ARCHIVE="/tmp/monitoring.zip"
 
 # ============================================================
@@ -60,6 +67,7 @@ echo "=============================================="
 echo "Spark container : ${SPARK_CONTAINER}"
 echo "Spark home      : ${SPARK_HOME}"
 echo "Spark submit    : ${SPARK_SUBMIT}"
+echo "Spark Python    : ${SPARK_PYTHON}"
 echo "Master          : ${MASTER}"
 echo "Application     : ${CONTAINER_SCRIPT}"
 echo "Packages        : ${PACKAGES}"
@@ -81,9 +89,32 @@ if ! docker ps --format '{{.Names}}' | grep -q "^${SPARK_CONTAINER}$"; then
 fi
 
 # ============================================================
+# Verify uv-managed Python
+# ============================================================
+
+for container in "${SPARK_CONTAINERS[@]}"; do
+    if ! docker exec "${container}" test -x "${SPARK_PYTHON}"; then
+        echo "ERROR: uv-managed Python not found in ${container}:"
+        echo "  ${SPARK_PYTHON}"
+        echo ""
+        echo "Rebuild and recreate the Spark containers:"
+        echo "  docker compose build --no-cache spark-master spark-worker-1 spark-worker-2"
+        echo "  docker compose up -d --force-recreate spark-master spark-worker-1 spark-worker-2"
+        exit 1
+    fi
+done
+
+echo "Checking Spark Python environment..."
+
+docker exec "${SPARK_CONTAINER}" \
+    "${SPARK_PYTHON}" -c \
+    'import sys, encodings, pyspark, fastavro; print("Python:", sys.executable); print("PySpark:", pyspark.__version__); print("fastavro:", fastavro.__version__)'
+
+# ============================================================
 # Verify Spark Master
 # ============================================================
 
+echo ""
 echo "Checking Spark Master..."
 
 if ! docker exec "${SPARK_CONTAINER}" \
@@ -114,34 +145,70 @@ fi
 if ! docker exec "${SPARK_CONTAINER}" \
     test -f "${CONTAINER_CODEC}" || ! docker exec "${SPARK_CONTAINER}" \
     test -f "${CONTAINER_SCHEMA}"; then
+
     echo "ERROR: Spark schema decoder or canonical schema is not mounted."
     exit 1
 fi
 
 if ! docker exec "${SPARK_CONTAINER}" \
     test -f "${CONTAINER_MONITORING}/metrics.py"; then
+
     echo "ERROR: Monitoring package is not mounted in the Spark container."
     exit 1
 fi
 
+# ============================================================
+# Prevent duplicate data-quality jobs
+# ============================================================
+
 # A second data-quality application cannot share the processed/quarantine
 # checkpoints. Refuse duplicate submissions before they can corrupt progress.
-ACTIVE_DATA_QUALITY_APPS=$(curl -fsS http://localhost:8085/json/ | python3 -c '
+ACTIVE_DATA_QUALITY_APPS=$(
+    curl -fsS http://localhost:8085/json/ | python3 -c '
 import json
 import sys
 
 payload = json.load(sys.stdin)
 apps = payload.get("activeapps", payload.get("activeApps", []))
+
 for app in apps:
     if app.get("name") == "SparkStructuredStreamingDataQuality":
         print("{} ({})".format(app.get("id"), app.get("state")))
-' )
+'
+)
+
 if [ -n "${ACTIVE_DATA_QUALITY_APPS}" ]; then
     echo "ERROR: A data-quality Spark application is already active:"
     echo "${ACTIVE_DATA_QUALITY_APPS}"
     echo "Stop the existing application before retrying this command."
     exit 1
 fi
+
+# ============================================================
+# Prepare Spark runtime dependencies
+# ============================================================
+
+echo ""
+echo "Preparing Spark runtime dependencies..."
+
+for container in "${SPARK_CONTAINERS[@]}"; do
+    docker exec -u 0 "${container}" \
+        mkdir -p "${SPARK_HOME}/jars"
+
+    docker exec -u 0 "${container}" sh -c \
+        "if [ ! -f '${KAFKA_CLIENT_JAR}' ]; then \
+            curl -fsSL '${KAFKA_CLIENT_URL}' -o '${KAFKA_CLIENT_JAR}'; \
+        fi"
+done
+
+docker exec -u 0 "${SPARK_CONTAINER}" sh -c \
+    "mkdir -p '${IVY_CACHE}/cache' '${IVY_CACHE}/jars' \
+    && chown -R spark:spark '${IVY_CACHE}'"
+
+# Package the monitoring module using the uv-managed Python interpreter.
+docker exec "${SPARK_CONTAINER}" \
+    "${SPARK_PYTHON}" -c \
+    "import shutil; shutil.make_archive('/tmp/monitoring', 'zip', '${CONTAINER_WORKDIR}', 'monitoring')"
 
 # ============================================================
 # Submit distributed Spark application
@@ -151,23 +218,19 @@ echo ""
 echo "Submitting Spark application..."
 echo ""
 
-for container in "${SPARK_CONTAINERS[@]}"; do
-    docker exec -u 0 "${container}" mkdir -p "${SPARK_HOME}/jars"
-    docker exec -u 0 "${container}" sh -c \
-        "if [ ! -f '${KAFKA_CLIENT_JAR}' ]; then curl -fsSL '${KAFKA_CLIENT_URL}' -o '${KAFKA_CLIENT_JAR}'; fi"
-done
-
-docker exec -u 0 "${SPARK_CONTAINER}" sh -c \
-    "mkdir -p '${IVY_CACHE}/cache' '${IVY_CACHE}/jars' && chown -R spark:spark '${IVY_CACHE}'"
-
-docker exec "${SPARK_CONTAINER}" python3 -c \
-    "import shutil; shutil.make_archive('/tmp/monitoring', 'zip', '${SPARK_HOME}/work-dir', 'monitoring')"
-
-docker exec "${SPARK_CONTAINER}" \
+docker exec \
+    -e PYSPARK_PYTHON="${SPARK_PYTHON}" \
+    -e PYSPARK_DRIVER_PYTHON="${SPARK_PYTHON}" \
+    -e PYTHONPATH="${CONTAINER_WORKDIR}" \
+    "${SPARK_CONTAINER}" \
     "${SPARK_SUBMIT}" \
     --master "${MASTER}" \
     --conf "spark.cores.max=2" \
     --conf "spark.jars.ivy=${IVY_CACHE}" \
+    --conf "spark.pyspark.python=${SPARK_PYTHON}" \
+    --conf "spark.pyspark.driver.python=${SPARK_PYTHON}" \
+    --conf "spark.executorEnv.PYSPARK_PYTHON=${SPARK_PYTHON}" \
+    --conf "spark.executorEnv.PYTHONPATH=${CONTAINER_WORKDIR}" \
     --jars "${KAFKA_CLIENT_JAR}" \
     --packages "${PACKAGES}" \
     --py-files "${CONTAINER_CODEC},${CONTAINER_MONITORING_ARCHIVE}" \
@@ -178,3 +241,4 @@ echo ""
 echo "=============================================="
 echo "Spark job submitted successfully."
 echo "=============================================="
+
