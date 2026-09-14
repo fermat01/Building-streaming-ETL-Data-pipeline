@@ -1,0 +1,15 @@
+[project]
+name = "building-streaming-etl-data-pipeline"
+version = "0.1.0"
+description = "Real-time streaming ETL data pipeline using Kafka, Spark, Airflow, and MinIO."
+readme = "README.md"
+requires-python = ">=3.11,<3.12"
+
+dependencies = [
+    "confluent-kafka[avro]==2.5.3",
+    "fastavro==1.9.7",
+    "requests",
+    "json5",
+    "pyspark==3.5.8",
+    "statsd==4.0.1",
+]

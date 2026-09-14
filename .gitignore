@@ -3,6 +3,7 @@ logs
 LICENSE
 README.md
 
+.venv/
 .env
 .env.*
 !.env.example
