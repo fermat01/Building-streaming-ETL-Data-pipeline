@@ -1,14 +1,14 @@
-# Real-Time Streaming ETL Data Pipeline
+# Real-Time Streaming Data Platform
 
-[![License](https://img.shields.io/github/license/fermat01/Building-streaming-ETL-Data-pipeline)](LICENSE)
-[![CI](https://github.com/fermat01/Building-streaming-ETL-Data-pipeline/actions/workflows/ci.yml/badge.svg)](https://github.com/fermat01/Building-streaming-ETL-Data-pipeline/actions/workflows/ci.yml)
-[![CD](https://github.com/fermat01/Building-streaming-ETL-Data-pipeline/actions/workflows/cd.yml/badge.svg)](https://github.com/fermat01/Building-streaming-ETL-Data-pipeline/actions/workflows/cd.yml)
+[![License](https://img.shields.io/github/license/fermat01/real-time-streaming-data-platform)](LICENSE)
+[![CI](https://github.com/fermat01/real-time-streaming-data-platform/actions/workflows/ci.yml/badge.svg)](https://github.com/fermat01/real-time-streaming-data-platform/actions/workflows/ci.yml)
+[![CD](https://github.com/fermat01/real-time-streaming-data-platform/actions/workflows/cd.yml/badge.svg)](https://github.com/fermat01/real-time-streaming-data-platform/actions/workflows/cd.yml)
 [![Python](https://img.shields.io/badge/Python-3.11-blue)](https://www.python.org/)
 [![Apache Airflow](https://img.shields.io/badge/Apache%20Airflow-2.7.3-017CEE?logo=apacheairflow&logoColor=white)](https://airflow.apache.org/)
-[![Apache Kafka](https://img.shields.io/badge/Apache%20Kafka-3%20?logo=apachekafka&logoColor=white)](https://kafka.apache.org/)
+[![Apache Kafka](https://img.shields.io/badge/Apache%20Kafka-3%20Brokers-231F20?logo=apachekafka&logoColor=white)](https://kafka.apache.org/)
 [![Apache Spark](https://img.shields.io/badge/Apache%20Spark-3.5.8-E25A1C)](https://spark.apache.org/)
-![GitHub language count](https://img.shields.io/github/languages/count/fermat01/Building-streaming-Data-pipeline?style=flat)
-![ViewCount](https://views.whatilearened.today/views/github/fermat01/Building-streaming-Data-pipeline.svg?cache=remove)
+![GitHub language count](https://img.shields.io/github/languages/count/fermat01/real-time-streaming-data-platform?style=flat)
+![ViewCount](https://views.whatilearened.today/views/github/fermat01/real-time-streaming-data-platform.svg?cache=remove)
 
 A production-oriented **real-time streaming data platform** built with Apache Airflow, a three-broker Apache Kafka cluster, Confluent Schema Registry, Apache Spark Structured Streaming, MinIO, Prometheus, and Grafana.
 
@@ -707,7 +707,7 @@ This project demonstrates practical Data Engineering skills across the full stre
 
 
 <p align="left">
-  <img src="images/expected_result.png" width="450" alt="result">
+  <img src="images/expected_result.png" width="550" alt="result">
 </p>
 
 
