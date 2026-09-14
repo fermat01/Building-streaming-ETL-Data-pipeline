@@ -6,12 +6,20 @@ readme = "README.md"
 requires-python = ">=3.11,<3.12"
 
 dependencies = [
-    "confluent-kafka[avro]==2.5.3",
-    "fastavro==1.9.7",
     "requests",
     "json5",
-    "pyspark==3.5.8",
+]
+
+[project.optional-dependencies]
+airflow = [
+    "apache-airflow==2.7.3",
+    "confluent-kafka[avro]==2.5.3",
     "statsd==4.0.1",
+]
+
+spark = [
+    "fastavro==1.9.7",
+    "pyspark==3.5.8",
 ]
 
 [dependency-groups]

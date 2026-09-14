@@ -80,7 +80,7 @@ def validate_configuration() -> None:
 def create_spark_session(app_name: str) -> SparkSession:
     logger.info("Starting distributed Spark application=%s", app_name)
     spark = (
-        SparkSession.builder.appName(app_name)
+        SparkSession.builder.appName(app_name)  # pyright: ignore[reportAttributeAccessIssue]
         .config("spark.hadoop.fs.s3a.access.key", MINIO_ACCESS_KEY)
         .config("spark.hadoop.fs.s3a.secret.key", MINIO_SECRET_KEY)
         .config("spark.hadoop.fs.s3a.endpoint", MINIO_ENDPOINT)
