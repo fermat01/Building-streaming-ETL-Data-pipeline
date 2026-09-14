@@ -18,6 +18,7 @@ jobs:
         uses: astral-sh/setup-uv@v6
         with:
           version: "0.12.13"
+          enable-cache: true
 
       - name: Set up Python
         run: uv python install 3.11
@@ -40,6 +41,8 @@ jobs:
       - name: Validate shell scripts
         run: bash -n scripts/*.sh
 
+      - name: Prepare CI environment
+        run: cp .env.example .env
+
       - name: Validate Compose configuration
         run: docker compose config --quiet
-
