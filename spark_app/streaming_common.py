@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "http://minio:9000")
 MINIO_ACCESS_KEY = os.getenv("MINIO_ROOT_USER")
 MINIO_SECRET_KEY = os.getenv("MINIO_ROOT_PASSWORD")
+
 KAFKA_BOOTSTRAP_SERVERS = os.getenv(
     "KAFKA_BOOTSTRAP_SERVERS",
     "broker-1:9092,broker-2:9093,broker-3:9094",
@@ -24,14 +25,23 @@ KAFKA_SECURITY_PROTOCOL = os.getenv("KAFKA_SECURITY_PROTOCOL", "SASL_PLAINTEXT")
 KAFKA_SASL_MECHANISM = os.getenv("KAFKA_SASL_MECHANISM", "SCRAM-SHA-256")
 KAFKA_CONSUMER_USERNAME = os.getenv("KAFKA_CONSUMER_USERNAME")
 KAFKA_CONSUMER_PASSWORD = os.getenv("KAFKA_CONSUMER_PASSWORD")
-KAFKA_CONSUMER_GROUP_ID = os.getenv(
-    "KAFKA_CONSUMER_GROUP_ID", "spark-streaming-consumer"
+
+PROCESSED_PATH = os.getenv(
+    "MINIO_OUTPUT_PATH",
+    "s3a://streaming-data/processed/",
 )
-PROCESSED_PATH = os.getenv("MINIO_OUTPUT_PATH", "s3a://streaming-data/processed/")
-QUARANTINE_PATH = os.getenv("MINIO_QUARANTINE_PATH", "s3a://streaming-data/quarantine/")
-ANALYTICS_PATH = os.getenv("MINIO_ANALYTICS_PATH", "s3a://streaming-data/analytics/")
+QUARANTINE_PATH = os.getenv(
+    "MINIO_QUARANTINE_PATH",
+    "s3a://streaming-data/quarantine/",
+)
+ANALYTICS_PATH = os.getenv(
+    "MINIO_ANALYTICS_PATH",
+    "s3a://streaming-data/analytics/",
+)
+
 CHECKPOINT_ROOT = os.getenv(
-    "SPARK_CHECKPOINT_PATH", "s3a://streaming-data/checkpoints/"
+    "SPARK_CHECKPOINT_PATH",
+    "s3a://streaming-data/checkpoints/",
 ).rstrip("/")
 
 
@@ -73,19 +83,29 @@ def validate_configuration() -> None:
         }.items()
         if not value
     ]
+
     if missing:
         raise ValueError("Missing required configuration: " + ", ".join(missing))
 
 
 def create_spark_session(app_name: str) -> SparkSession:
     logger.info("Starting distributed Spark application=%s", app_name)
+
     spark = (
-        SparkSession.builder.appName(app_name)  # pyright: ignore[reportAttributeAccessIssue]
+        SparkSession.builder.appName(  # pyright: ignore[reportAttributeAccessIssue]
+            app_name
+        )
+        # Adaptive Query Execution is not supported by Structured Streaming.
+        .config("spark.sql.adaptive.enabled", "false")
+        # MinIO / S3A configuration.
         .config("spark.hadoop.fs.s3a.access.key", MINIO_ACCESS_KEY)
         .config("spark.hadoop.fs.s3a.secret.key", MINIO_SECRET_KEY)
         .config("spark.hadoop.fs.s3a.endpoint", MINIO_ENDPOINT)
         .config("spark.hadoop.fs.s3a.path.style.access", "true")
-        .config("spark.hadoop.fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem")
+        .config(
+            "spark.hadoop.fs.s3a.impl",
+            "org.apache.hadoop.fs.s3a.S3AFileSystem",
+        )
         .config("spark.hadoop.fs.s3a.connection.ssl.enabled", "false")
         .config(
             "spark.hadoop.fs.s3a.aws.credentials.provider",
@@ -94,23 +114,33 @@ def create_spark_session(app_name: str) -> SparkSession:
         .config("spark.sql.files.maxRecordsPerFile", 10000)
         .getOrCreate()
     )
+
     spark.sparkContext.setLogLevel("WARN")
+
     return spark
 
 
 def kafka_stream(spark: SparkSession) -> DataFrame:
     return (
         spark.readStream.format("kafka")
-        .option("kafka.bootstrap.servers", KAFKA_BOOTSTRAP_SERVERS)
-        .option("kafka.security.protocol", KAFKA_SECURITY_PROTOCOL)
-        .option("kafka.sasl.mechanism", KAFKA_SASL_MECHANISM)
+        .option(
+            "kafka.bootstrap.servers",
+            KAFKA_BOOTSTRAP_SERVERS,
+        )
+        .option(
+            "kafka.security.protocol",
+            KAFKA_SECURITY_PROTOCOL,
+        )
+        .option(
+            "kafka.sasl.mechanism",
+            KAFKA_SASL_MECHANISM,
+        )
         .option(
             "kafka.sasl.jaas.config",
             "org.apache.kafka.common.security.scram.ScramLoginModule required "
             f'username="{KAFKA_CONSUMER_USERNAME}" '
             f'password="{KAFKA_CONSUMER_PASSWORD}";',
         )
-        .option("kafka.group.id", KAFKA_CONSUMER_GROUP_ID)
         .option("subscribe", KAFKA_TOPIC)
         .option("startingOffsets", "earliest")
         .option("failOnDataLoss", "false")
@@ -120,11 +150,24 @@ def kafka_stream(spark: SparkSession) -> DataFrame:
 
 def processed_stream_schema() -> StructType:
     schema = user_schema()
+
     return StructType(
         schema.fields
         + [
-            StructField("registered_timestamp", StringType(), True),
-            StructField("processing_timestamp", StringType(), True),
-            StructField("ingestion_date", StringType(), True),
+            StructField(
+                "registered_timestamp",
+                StringType(),
+                True,
+            ),
+            StructField(
+                "processing_timestamp",
+                StringType(),
+                True,
+            ),
+            StructField(
+                "ingestion_date",
+                StringType(),
+                True,
+            ),
         ]
     )

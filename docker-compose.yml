@@ -729,6 +729,7 @@ services:
       - ./spark_app:/opt/spark/work-dir/spark_app:ro
       - ./schemas:/opt/spark/work-dir/schemas:ro
       - ./monitoring:/opt/spark/work-dir/monitoring:ro
+      - ./monitoring/hadoop/hadoop-metrics2.properties:/opt/spark/conf/hadoop-metrics2.properties:ro
 
     env_file:
       - .env
@@ -738,7 +739,7 @@ services:
       SPARK_MASTER_PORT: 7077
       SPARK_MASTER_WEBUI_PORT: 8080
       SPARK_MASTER_OPTS: "-Dspark.metrics.conf=/opt/spark/work-dir/monitoring/spark/metrics.properties"
-      PYTHONPATH: /opt/spark/work-dir/monitoring
+      PYTHONPATH: /opt/spark/work-dir
 
     command:
       - /opt/spark/bin/spark-class
@@ -772,12 +773,13 @@ services:
       - ./spark_app:/opt/spark/work-dir/spark_app:ro
       - ./schemas:/opt/spark/work-dir/schemas:ro
       - ./monitoring:/opt/spark/work-dir/monitoring:ro
+      - ./monitoring/hadoop/hadoop-metrics2.properties:/opt/spark/conf/hadoop-metrics2.properties:ro
 
     environment:
       SPARK_WORKER_CORES: 2
       SPARK_WORKER_MEMORY: 2g
       SPARK_WORKER_OPTS: "-Dspark.metrics.conf=/opt/spark/work-dir/monitoring/spark/metrics.properties"
-      PYTHONPATH: /opt/spark/work-dir/monitoring
+      PYTHONPATH: /opt/spark/work-dir
 
     command:
       - /opt/spark/bin/spark-class
@@ -810,12 +812,13 @@ services:
       - ./spark_app:/opt/spark/work-dir/spark_app:ro
       - ./schemas:/opt/spark/work-dir/schemas:ro
       - ./monitoring:/opt/spark/work-dir/monitoring:ro
+      - ./monitoring/hadoop/hadoop-metrics2.properties:/opt/spark/conf/hadoop-metrics2.properties:ro
 
     environment:
       SPARK_WORKER_CORES: 2
       SPARK_WORKER_MEMORY: 2g
       SPARK_WORKER_OPTS: "-Dspark.metrics.conf=/opt/spark/work-dir/monitoring/spark/metrics.properties"
-      PYTHONPATH: /opt/spark/work-dir/monitoring
+      PYTHONPATH: /opt/spark/work-dir
 
     command:
       - /opt/spark/bin/spark-class
