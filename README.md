@@ -10,11 +10,40 @@
 ![GitHub language count](https://img.shields.io/github/languages/count/fermat01/real-time-streaming-data-platform?style=flat)
 ![ViewCount](https://views.whatilearened.today/views/github/fermat01/real-time-streaming-data-platform.svg?cache=remove)
 
-A production-oriented **real-time streaming data platform** built with Apache Airflow, a three-broker Apache Kafka cluster, Confluent Schema Registry, Apache Spark Structured Streaming, MinIO, Prometheus, and Grafana.
+## Project Overview
 
-The platform ingests live API events, validates them against governed Avro contracts, processes them on a distributed Spark cluster, separates valid and quarantined records, computes real-time analytics, persists Parquet datasets to S3-compatible object storage, and exposes operational metrics through a complete observability stack.
+**Real-Time Streaming Data Platform** is a production-oriented Data Engineering project that demonstrates the design and operation of a distributed event-streaming architecture using Docker Compose.
+The platform ingests live API events through **Apache Airflow**, serializes them with **Avro** and manages schemas through **Confluent Schema Registry**, then publishes the events to a replicated **three-broker Apache Kafka cluster**.
+A distributed **Apache Spark Structured Streaming** cluster validates and transforms the stream, persists valid records as Parquet datasets in **MinIO**, isolates invalid records in a quarantine path, and runs a separate streaming analytics workload for real-time aggregations.
+Beyond data processing, the platform incorporates **Prometheus and Grafana observability, Kafka authentication and ACLs, data-quality monitoring, modern Python dependency management with `uv`, automated testing and linting, and CI/CD with GitHub Actions**.
+The goal is to demonstrate the architectural patterns and engineering practices involved in building a reliable, observable, and maintainable real-time data platform.
 
----
+
+## Table of Contents
+
+- [Project Overview](#project-overview)
+- [Architecture](#architecture)
+- [Data Flow](#data-flow)
+- [Apache Spark Cluster](#apache-spark-cluster)
+- [Apache Kafka Cluster](#apache-kafka-cluster)
+- [Schema Governance](#schema-governance)
+- [MinIO Data Lake](#minio-data-lake)
+- [Observability](#observability)
+- [Security](#security)
+- [Technology Stack](#technology-stack)
+- [Repository Structure](#repository-structure)
+- [Getting Started](#getting-started)
+- [Service Interfaces](#service-interfaces)
+- [Verify the Pipeline](#verify-the-pipeline)
+- [Development](#development)
+- [Testing and Quality Gates](#testing-and-quality-gates)
+- [CI/CD](#cicd)
+- [Engineering Decisions](#engineering-decisions)
+- [Production Considerations](#production-considerations)
+- [What This Project Demonstrates](#what-this-project-demonstrates)
+- [License](#license)
+
+
 
 ## Architecture
 
@@ -137,12 +166,9 @@ The Spark runtime uses:
 
 The platform runs a **three-broker Kafka cluster**:
 
-
-
 <p align="left">
   <img src="images/kafka_cluster.png" width="300" alt="kafka cluster">
 </p>
-
 
 The primary streaming topic is configured with:
 
@@ -208,12 +234,9 @@ MinIO provides local **S3-compatible object storage**.
 
 The bucket is organized into four main logical areas:
 
-
-
 <p align="left">
   <img src="images/MinIOData Lake.png" width="450" alt="data lake">
 </p>
-
 
 This separates operational processing concerns and allows each streaming workload to maintain independent checkpoints.
 
@@ -223,12 +246,9 @@ This separates operational processing concerns and allows each streaming workloa
 
 The platform includes a dedicated observability layer:
 
-
 <p align="left">
   <img src="images/observ.png" width="450" alt="observability">
 </p>
-
-
 
 ### Prometheus
 
@@ -405,8 +425,8 @@ You need:
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/fermat01/Building-streaming-ETL-Data-pipeline.git
-cd Building-streaming-ETL-Data-pipeline
+git clone https://github.com/fermat01/real-time-streaming-data-platform.git
+cd real-time-streaming-data-platform
 ```
 
 ### 2. Configure Environment Variables
@@ -634,11 +654,9 @@ git push origin v1.0.0
 
 GitHub Actions then builds:
 
-
 <p align="left">
   <img src="images/GitHubActions.png" width="400" alt="github actions">
 </p>
-
 
 The images are published to GitHub Container Registry using the version tag.
 
@@ -704,12 +722,9 @@ For an actual production deployment, additional work would include:
 
 This project demonstrates practical Data Engineering skills across the full streaming lifecycle:
 
-
-
 <p align="left">
   <img src="images/expected_result.png" width="550" alt="result">
 </p>
-
 
 Core competencies demonstrated include **Apache Kafka, Apache Spark Structured Streaming, Apache Airflow, distributed systems, Avro/schema governance, data-quality engineering, streaming analytics, object storage, observability, Docker, modern Python tooling, automated testing, and CI/CD**.
 
